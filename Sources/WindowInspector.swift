@@ -103,12 +103,27 @@ public final class WindowInspector: @unchecked Sendable {
         if isBrowser(bundleId: bundleId, appName: appName) {
             let tabInfo = fetchBrowserTabInfo(appName: appName, bundleId: bundleId)
             if let realTabTitle = tabInfo.title, !realTabTitle.isEmpty {
-                // 如果提取到了真实网页标题（如“创建代付协议 - 费用中心 - 腾讯云”），直接替换外壳泛化标题
+                // 如果提取到了真实网页标题（如“Apple Developer Documentation”），直接替换外壳泛化标题
                 windowTitle = realTabTitle
             }
             pageUrl = tabInfo.url
             if let u = pageUrl {
                 siteDomainLabel = extractDomainLabel(url: u)
+            }
+        }
+
+        // 动态支持用户在设置中自定义的隐私黑名单与敏感关键词（应用名、BundleId、窗口标题、URL 全链路拦截）
+        let settings = ContextStore.shared.load().settings
+        let nameLower = appName.lowercased()
+        let idLower = bundleId.lowercased()
+        let winLower = windowTitle.lowercased()
+        for ignored in settings.customIgnoredApps {
+            let ig = ignored.trimmingCharacters(in: .whitespaces).lowercased()
+            if !ig.isEmpty {
+                if nameLower.contains(ig) || idLower.contains(ig) || winLower.contains(ig) || (pageUrl?.lowercased().contains(ig) ?? false) {
+                    AppLogger.shared.log(tag: "PRIVACY_FILTER", message: "🛡️ 已拦截包含隐私关键词 [\(ig)] 的窗口: [\(appName)] [\(windowTitle)]")
+                    return nil
+                }
             }
         }
 

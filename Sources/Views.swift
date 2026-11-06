@@ -129,6 +129,20 @@ public struct MainPopoverView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            // 借鉴阶跃AI：一键放大展开为全景工作台独立大窗口
+            Button(action: {
+                DashboardWindowController.shared.showWindow()
+            }) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .padding(4)
+                    .background(Color.primary.opacity(0.06))
+                    .cornerRadius(5)
+            }
+            .buttonStyle(.plain)
+            .help("展开为全景工作台大窗口")
         }
     }
 
@@ -147,7 +161,7 @@ public struct MainPopoverView: View {
                         .foregroundColor(.orange)
                 }
 
-                TextField("向全局记忆提问 (如: 腾讯云协议发给谁了 / 改了什么代码)", text: $memoryQueryText, onCommit: {
+                TextField("向全局记忆提问 (如: 今天改了什么代码 / 哪个模块重构了)", text: $memoryQueryText, onCommit: {
                     performAskMemory()
                 })
                 .textFieldStyle(.plain)

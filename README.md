@@ -17,23 +17,32 @@
 
 ## 📸 界面一览 (Screenshots)
 
+### 🖥️ 全景独立主工作台 (Full Dashboard Workbench)
+> 参考商业级顶级 AI 产品设计，提供侧边栏专注看板、全局语义搜索、离开现场快照微缩矩阵、与右侧 Inspector 详情检查器。支持从菜单栏小浮窗一键放大展开。
+
+<p align="center">
+  <img src="docs/screenshots/02_dashboard_full.png" alt="全景独立主工作台" width="95%" />
+</p>
+
+### ⚡️ 核心模块与设置交互
+
 <table align="center">
   <tr>
     <td align="center" width="33%">
-      <strong>⚡️ 主菜单栏浮窗 (Main Panel)</strong><br><br>
-      <img src="docs/screenshots/01_main_panel.png" alt="主菜单栏面板" width="100%" />
+      <strong>⚡️ 状态栏快捷浮窗</strong><br><br>
+      <img src="docs/screenshots/01_main_panel.png" alt="状态栏快捷浮窗" width="100%" />
       <br>
-      <em>微缩视窗快照 · 下一步行动胶囊 · 记忆智能检索</em>
+      <em>微缩视窗快照 · 下一步行动胶囊 · 快速语义检索</em>
     </td>
     <td align="center" width="33%">
-      <strong>⚙️ 开源设置面板 (BYOK Settings)</strong><br><br>
-      <img src="docs/screenshots/02_settings_ai.png" alt="设置面板" width="100%" />
+      <strong>⚙️ 开源配置中心 (BYOK)</strong><br><br>
+      <img src="docs/screenshots/03_settings_ai.png" alt="开源配置中心" width="100%" />
       <br>
       <em>支持 DeepSeek / 智谱 / OpenAI / 本地 Ollama</em>
     </td>
     <td align="center" width="33%">
-      <strong>☀️ 每日复盘与晨报 (Daily Briefing)</strong><br><br>
-      <img src="docs/screenshots/03_daily_briefing.png" alt="每日复盘弹窗" width="100%" />
+      <strong>☀️ 每日智能工作复盘</strong><br><br>
+      <img src="docs/screenshots/04_daily_briefing.png" alt="每日智能工作复盘" width="100%" />
       <br>
       <em>攻坚业务实体总结 · 专注时长 · 一键复制 Markdown</em>
     </td>
@@ -45,15 +54,15 @@
 ## 💡 为什么你需要全局记忆精灵？
 
 在现代日常办公与研发中，你经常面临这些痛点：
-* **多任务频繁切换**：正在处理合同或查资料，突然被微信、临时会议打断，切回来后根本想不起“刚才改到哪一步了”；
-* **传统工具很“傻”**：只看得到进程名（如 `Chrome`、`Finder`），根本不知道你屏幕上真正开着的业务是**“腾讯云代付协议在线签署”**还是**“接口重构”**；
+* **多任务频繁切换**：正在处理合同、写代码或查资料，突然被即时通讯、临时会议打断，切回来后根本想不起“刚才改到哪一步了”；
+* **传统工具很“傻”**：只看得到进程名（如 `Chrome`、`Finder`），根本不知道你屏幕上真正开着的业务是**“云原生网关配置联调”**还是**“接口架构重构”**；
 * **车轱辘废话**：假 AI 工具动辄输出“使用浏览器应用”、“处理相关任务”，毫无业务信息量；
 * **隐私顾虑**：商业闭源录屏软件动辄上传屏幕至云端，面临严重的安全和隐私泄露风险。
 
 **全局记忆精灵在后台为你提供：**
 1. **真实视窗穿透**：穿透 Chromium / Webkit 内核（Chrome、Edge、ego lite、Safari）与现代 IDE，直接嗅探真实标签页标题、业务平台与文件路径；
 2. **端侧神经网络视觉（Apple Neural Engine）**：离开瞬间由本地离线神经引擎毫秒级 OCR 提炼屏幕核心文字，**屏幕快照绝不上传云端，完全本地化**；
-3. **拒绝套话，直击业务**：严格的 Anti-Slop 反废话机制，精准提炼具体业务实体（如：`腾讯云 · 代付协议在线签署确认`）；
+3. **拒绝套话，直击业务**：严格的 Anti-Slop 反废话机制，精准提炼具体业务实体（如：`Swift 6 结构化并发与内存安全重构`）；
 4. **行动化胶囊**：提供【⚡️ 下一步：... →】可交互行动胶囊，点击一键唤醒并恢复当时的工作窗口現場；
 5. **权限长效锁定**：采用固定 Designated Requirement 深度签名，一次授权长期有效，升级重启绝不反复弹窗。
 

@@ -239,7 +239,7 @@ public final class ContextEngine: ObservableObject {
                         updated.detectedProject = p
                     }
 
-                    // 如果原标题只是泛化应用名，而当前拿到了具体的业务窗口标题（如腾讯云代付协议），直接精准更新标题
+                    // 如果原标题只是泛化应用名，而当前拿到了具体的业务窗口标题（如具体网页或代码文件标题），直接精准更新标题
                     if updated.title.contains("工作现场") && !info.windowTitle.isEmpty && info.windowTitle != info.appName {
                         updated.title = formatTitle(appName: info.appName, winTitle: info.windowTitle, project: updated.detectedProject)
                     }

@@ -51,13 +51,13 @@ public final class AISummarizer: @unchecked Sendable {
 
         【铁律 2 - 必须以具体业务实体与动宾短语命名】：
         必须直接输出真实的业务动作 + 核心实体（平台、业务名、合同、人名、单号等）：
-        - 若是腾讯云创建代付协议/签署：输出“腾讯云代付协议在线签署确认 (短信已发送)”
-        - 若是微信小程序后台或代码提审：输出“微信小程序版本发布与配置提审”
-        - 若是开发工具写代码：输出“导游宝核心接口重构”或“全局记忆视窗穿透重构”
-        - 若是日常沟通或笔记：输出“连兵/业务商务洽谈同步”
+        - 若是云平台控制台：输出“云原生网关路由规则配置联调”
+        - 若是开发者工具或文档：输出“Apple 开发者文档 · 视觉神经引擎解析”
+        - 若是代码编辑器写代码：输出“Swift 6 结构化并发与内存安全重构”
+        - 若是版本发布或测试：输出“单元测试套件覆盖与持续集成验证”
 
         【铁律 3 - 下一步必须具体指引】：
-        给出明确的动宾行动（如“跟进连兵与季新签署短信”、“核对代付协议款项”、“执行编译验证”）。
+        给出明确的动宾行动（如“跟进客户在线签署短信确认”、“核对合同文本细节”、“执行本地编译验证”）。
 
         请严格按两行输出：
         意图: <15字以内，直击业务本质与实体>
@@ -143,14 +143,15 @@ public final class AISummarizer: @unchecked Sendable {
         var entity = ""
         var sug = "继续推进当前事项"
 
-        if url.contains("cloud.tencent.com") || rawTitle.contains("腾讯云") {
-            if rawTitle.contains("代付") || rawTitle.contains("合同") || rawTitle.contains("签署") {
-                entity = "腾讯云 · 代付协议在线签署"
-                sug = "跟进签署人短信验证确认"
-            } else {
-                entity = "腾讯云控制台业务操作"
-                sug = "完成控制台配置"
-            }
+        if url.contains("developer.apple.com") || rawTitle.contains("Apple Developer") {
+            entity = "Apple 开发者文档 · 核心框架查阅"
+            sug = "研读离线视觉与辅助功能规范"
+        } else if url.contains("github.com") || rawTitle.contains("GitHub") {
+            entity = "GitHub 开源仓库协作"
+            sug = "拉取代码或提交 Pull Request"
+        } else if url.contains("console") || rawTitle.contains("控制台") {
+            entity = "云原生微服务控制台运维"
+            sug = "检查容器状态与服务健康度"
         } else if url.contains("mp.weixin.qq.com") || rawTitle.contains("微信公众平台") {
             entity = "微信小程序管理与配置"
             sug = "完成版本提审或配置"
@@ -203,7 +204,7 @@ public final class AISummarizer: @unchecked Sendable {
         请根据真实记忆简短、精准、友好地回答用户的问题。
         【铁律】：
         1. 绝不提及任何没有在记录中出现的陈旧历史。
-        2. 直击真实业务（如腾讯云代付协议、导游宝项目开发等）。
+        2. 直击真实业务（如云服务配置、移动端项目研发等）。
         回答尽量控制在120字以内。
         """
 
@@ -274,14 +275,14 @@ public final class AISummarizer: @unchecked Sendable {
 
         【输出硬性要求】：
         1. 严禁捏造不存在的历史！严格只针对用户今天实际发生的真实工作进行总结。
-        2. 点明核心业务动作与突破（如腾讯云代付协议在线签署确认、导游宝业务逻辑推进、全局记忆精灵本地神经穿透优化）。
+        2. 点明核心业务动作与突破（如架构设计与重构、核心研发逻辑推进、本地离线神经穿透优化）。
         3. 必须提取 2~4 个具体的攻坚业务/项目名称，放入 keyProjects 数组中，严禁返回空数组！
 
         严格按以下 JSON 格式输出，不要包含任何多余文字：
         {
           "summary": "今日核心工作成果总结（120字以内，点明攻坚的核心业务、关键动作与突破）",
-          "keyProjects": ["腾讯云代付协议", "导游宝", "全局记忆精灵"],
-          "suggestions": ["跟进签署短信完成在线签署", "推进核心模块测试"]
+          "keyProjects": ["开源框架并发重构", "端侧离线视觉模型", "单元测试套件覆盖"],
+          "suggestions": ["完善各平台 macOS 版本的向后兼容性测试", "编写针对开发者的配置接入文档"]
         }
         """
 
