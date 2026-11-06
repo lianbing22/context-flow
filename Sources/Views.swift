@@ -280,7 +280,7 @@ public struct MainPopoverView: View {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 6, height: 6)
-                    Text("当前专注")
+                    Text("当前专注中")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                 }
@@ -288,7 +288,7 @@ public struct MainPopoverView: View {
                 Spacer()
 
                 if let active = engine.activeSession {
-                    Text("\(max(1, active.totalActiveSeconds / 60)) 分钟")
+                    Text("已专注 \(max(1, active.totalActiveSeconds / 60)) 分钟")
                         .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .foregroundColor(.secondary)
                 }
@@ -342,12 +342,12 @@ public struct MainPopoverView: View {
                     Button(action: {
                         engine.suspendActiveNow()
                     }) {
-                        Text("挂起")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
+                        Text("立即挂起")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.orange)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(Color.primary.opacity(0.06))
+                            .background(Color.orange.opacity(0.12))
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
@@ -380,9 +380,9 @@ public struct MainPopoverView: View {
             HStack {
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(Color.orange)
+                        .fill(Color.red)
                         .frame(width: 6, height: 6)
-                    Text("挂起现场")
+                    Text("挂起现场 (防遗漏)")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                 }
