@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>app.memoryelf</string>
+    <key>CFBundleName</key>
+    <string>全局记忆精灵</string>
+    <key>CFBundleDisplayName</key>
+    <string>全局记忆精灵</string>
+    <key>CFBundleExecutable</key>
+    <string>全局记忆精灵</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>200</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>“全局记忆精灵”需要控制 System Events 和主流浏览器，用于自动保存与一键恢复工作现场。</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>“全局记忆精灵”需要屏幕录制权限，用于在离开任务时生成微缩视窗缩略图与本地文字识别。</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>“全局记忆精灵”需要辅助功能权限来感知前台活跃窗口与工作流。</string>
+</dict>
+</plist>
