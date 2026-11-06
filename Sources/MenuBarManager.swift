@@ -59,7 +59,7 @@ public final class MenuBarManager: NSObject {
         }
     }
 
-    private func showPopover(_ sender: AnyObject?) {
+    public func showPopover(_ sender: AnyObject?) {
         guard let button = statusItem.button else { return }
 
         // 唤醒并置顶显示

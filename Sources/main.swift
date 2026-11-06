@@ -31,6 +31,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MenuBarManager.shared.setup()
 
         AppLogger.shared.log(tag: "STARTUP", message: "ContextFlow 启动完毕，静默守护运行中")
+
+        // 监听外部控制通知 (支持即时远程唤起指定窗口)
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("app.memoryelf.open"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            guard let action = notif.userInfo?["action"] as? String else { return }
+            self?.handleOpenAction(action)
+        }
+
+        // 处理命令行启动参数
+        let args = CommandLine.arguments
+        if args.contains("--all") || args.contains("--open-all") {
+            handleOpenAction("all")
+        } else if args.contains("--dashboard") || args.contains("--open-dashboard") {
+            handleOpenAction("dashboard")
+        } else if args.contains("--settings") || args.contains("--open-settings") {
+            handleOpenAction("settings")
+        } else if args.contains("--briefing") || args.contains("--open-briefing") {
+            handleOpenAction("briefing")
+        } else if args.contains("--popover") || args.contains("--open-popover") {
+            handleOpenAction("popover")
+        }
+    }
+
+    private func handleOpenAction(_ action: String) {
+        Task { @MainActor in
+            switch action {
+            case "dashboard":
+                DashboardWindowController.shared.showWindow()
+            case "settings":
+                SettingsWindowController.shared.showWindow()
+            case "briefing":
+                BriefingWindowController.shared.showWindow()
+            case "popover":
+                MenuBarManager.shared.showPopover(nil)
+            case "all":
+                DashboardWindowController.shared.showWindow()
+                SettingsWindowController.shared.showWindow()
+                BriefingWindowController.shared.showWindow()
+                MenuBarManager.shared.showPopover(nil)
+            default:
+                break
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
