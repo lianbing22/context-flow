@@ -73,6 +73,7 @@ public struct DashboardView: View {
     @State private var searchText: String = ""
     @State private var selectedCategory: ContextEngine.FilterCategory = .all
     @State private var selectedSessionId: UUID? = nil
+    @State private var isInspectorVisible: Bool = true // 右侧辅助上下文面板统一可见性
 
     // 对话搜索状态
     @State private var chatInputText: String = ""
@@ -100,19 +101,30 @@ public struct DashboardView: View {
 
             Divider().opacity(0.35)
 
-            // MARK: - 2. 主内容工作区 (根据 Tab 路由分流)
-            mainContentRouter
-                .frame(minWidth: 500, maxWidth: .infinity)
-                .background(VisualEffectView(material: .contentBackground, blendingMode: .behindWindow))
+            // MARK: - 2. 主工作区：统一度量与绝对对齐基准线 (Unified Workspace Area)
+            VStack(spacing: 0) {
+                // 统一顶栏 (Unified Workspace Header - 固定 52pt 高度，绝对对齐基准)
+                unifiedWorkspaceHeader
+                    .frame(height: 52)
+                    .padding(.horizontal, 20)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.35))
 
-            // MARK: - 3. 右侧详情检查器 (仅在时间轴和挂起看板中展现)
-            if (selectedTab == "timeline" || selectedTab == "suspended"), let selected = currentSelectedSession {
                 Divider().opacity(0.35)
-                inspectorView(session: selected)
+
+                // 主路由内容区
+                mainContentRouter
+                    .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .background(VisualEffectView(material: .contentBackground, blendingMode: .behindWindow))
+
+            // MARK: - 3. 右侧统一上下文面板 (Unified Context Inspector - 常态化 280pt 容器，各 Tab 均有专属辅助上下文)
+            if isInspectorVisible {
+                Divider().opacity(0.35)
+                unifiedContextInspector
                     .frame(width: 280)
                     .layoutPriority(1)
                     .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .transition(.move(edge: .trailing))
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         .frame(minWidth: 980, minHeight: 620)
@@ -411,188 +423,312 @@ public struct DashboardView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 2. 全景时间轴工作区 (Timeline Workspace)
-    private var timelineWorkspace: some View {
-        VStack(spacing: 0) {
-            topToolbarView
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(Color(NSColor.controlBackgroundColor).opacity(0.35))
+    // MARK: - 统一顶栏体系 (Unified Workspace Header - 固定 52pt 高度，绝对对齐基准线)
+    private var unifiedWorkspaceHeader: some View {
+        HStack(spacing: 12) {
+            // 左侧：统一的图标徽章 + 标题 + 副标题
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(themeMgr.currentTheme.accentColor.opacity(0.15))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: headerIcon)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                }
 
-            Divider().opacity(0.35)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text(headerTitle)
+                            .font(.system(size: 13.5, weight: .bold))
+                            .foregroundColor(.primary)
 
-            ScrollView(.vertical, showsIndicators: true) {
-                if displaySessions.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 28))
-                            .foregroundColor(.secondary.opacity(0.4))
-                            .padding(.top, 40)
-                        Text(searchText.isEmpty ? "当前分类暂无记录" : "未搜索到匹配的记忆或现场")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 380), spacing: 14)], spacing: 14) {
-                        ForEach(displaySessions) { session in
-                            DashboardSessionCard(
-                                session: session,
-                                isSelected: (selectedSessionId == session.id) || (selectedSessionId == nil && displaySessions.first?.id == session.id),
-                                onSelect: {
-                                    selectedSessionId = session.id
-                                },
-                                onRestore: {
-                                    engine.restoreSession(id: session.id)
-                                },
-                                onComplete: {
-                                    engine.completeSession(id: session.id)
-                                }
-                            )
+                        if let badge = headerBadge {
+                            Text(badge)
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1.5)
+                                .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                                .foregroundColor(themeMgr.currentTheme.accentColor)
+                                .cornerRadius(4)
                         }
                     }
-                    .padding(18)
+                    Text(headerSubtitle)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
+            }
+
+            Spacer(minLength: 8)
+
+            // 中间/右侧专属操作区
+            headerCustomActions
+
+            // 最右侧固定全局操作按钮
+            HStack(spacing: 6) {
+                // 1. 折叠/展开右侧面板按钮 (保持全局各页面统一)
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isInspectorVisible.toggle()
+                    }
+                }) {
+                    Image(systemName: isInspectorVisible ? "sidebar.trailing" : "sidebar.right")
+                        .font(.system(size: 11))
+                        .foregroundColor(isInspectorVisible ? themeMgr.currentTheme.accentColor : .secondary)
+                        .padding(6)
+                        .background(isInspectorVisible ? themeMgr.currentTheme.accentColor.opacity(0.12) : Color.primary.opacity(0.05))
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help(isInspectorVisible ? "收起右侧辅助面板" : "展开右侧辅助面板")
+
+                // 2. 收起工作台常驻托盘按钮
+                Button(action: {
+                    DashboardWindowController.shared.closeWindow()
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 9.5))
+                        Text("收起")
+                            .font(.system(size: 10.5))
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.primary.opacity(0.05))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help("收起并常驻菜单栏")
             }
         }
     }
 
-    // 顶部工具栏与多维 Chips (流式自适应横向排版，永不截断)
-    private var topToolbarView: some View {
-        HStack(spacing: 8) {
-            // 全局搜索输入框 (支持回车切换至 AI 问答)
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11.5))
-                    .foregroundColor(themeMgr.currentTheme.accentColor)
+    private var headerIcon: String {
+        switch selectedTab {
+        case "chat": return "bubble.left.and.bubble.right.fill"
+        case "daily": return "sun.max.fill"
+        case "weekly": return "calendar.badge.clock"
+        case "suspended": return "bolt.badge.clock.fill"
+        default: return "clock.arrow.circlepath"
+        }
+    }
 
-                TextField("搜索记忆、业务实体或输入问题按回车问 AI...", text: $searchText, onCommit: {
-                    if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-                        chatInputText = searchText
-                        withAnimation { selectedTab = "chat" }
-                        sendChatMessage(searchText)
-                    }
-                })
-                .textFieldStyle(.plain)
-                .font(.system(size: 11.5))
+    private var headerTitle: String {
+        switch selectedTab {
+        case "chat": return "AI 记忆对话"
+        case "daily": return "今日全景日报"
+        case "weekly": return "本周深度周报"
+        case "suspended": return "挂起看板"
+        default: return "全景时间轴"
+        }
+    }
 
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
+    private var headerSubtitle: String {
+        switch selectedTab {
+        case "chat": return "问答真实工作足迹 · 穿透代码、视窗与操作上下文"
+        case "daily": return "基于端侧神经网络离线提炼 · 结构化工作复盘"
+        case "weekly": return "跨 7 天历史深度分析 · 研发投入与每日推进脉络"
+        case "suspended": return "离开瞬间智能保护 · 随时一键瞬时重回工作现场"
+        default: return "端侧离线时序感知 · 自动聚合应用与窗口"
+        }
+    }
 
-                    Button(action: {
-                        chatInputText = searchText
-                        withAnimation { selectedTab = "chat" }
-                        sendChatMessage(searchText)
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 9))
-                            Text("问记忆")
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2.5)
-                        .background(themeMgr.currentTheme.accentColor.opacity(0.15))
-                        .foregroundColor(themeMgr.currentTheme.accentColor)
-                        .cornerRadius(4)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.7))
-            .cornerRadius(7)
-            .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-            )
-            .frame(minWidth: 200, maxWidth: 320)
+    private var headerBadge: String? {
+        switch selectedTab {
+        case "chat": return "深度穿透"
+        case "daily": return "端侧提炼"
+        case "weekly": return "研发投入"
+        case "suspended": return "\(engine.suspendedSessions.count) 个待续"
+        default: return "\(displaySessions.count) 个现场"
+        }
+    }
 
-            // 多维分类过滤 Chips: 横向自适应滚动容器，确保任何分辨率完整展现
-            ScrollView(.horizontal, showsIndicators: false) {
+    @ViewBuilder
+    private var headerCustomActions: some View {
+        switch selectedTab {
+        case "timeline", "suspended":
+            HStack(spacing: 8) {
+                // 搜索框
                 HStack(spacing: 5) {
-                    ForEach(ContextEngine.FilterCategory.allCases) { cat in
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                selectedCategory = cat
-                            }
-                        }) {
-                            HStack(spacing: 3) {
-                                Text(cat.iconOnly)
-                                    .font(.system(size: 10))
-                                Text(cat.nameOnly)
-                                    .font(.system(size: 11, weight: selectedCategory == cat ? .semibold : .regular))
-                                    .lineLimit(1)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
-                            .foregroundColor(selectedCategory == cat ? themeMgr.currentTheme.accentColor : .secondary)
-                            .cornerRadius(6)
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+
+                    TextField("搜索记忆或按回车问 AI...", text: $searchText, onCommit: {
+                        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                            chatInputText = searchText
+                            withAnimation { selectedTab = "chat" }
+                            sendChatMessage(searchText)
+                        }
+                    })
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11.5))
+
+                    if !searchText.isEmpty {
+                        Button(action: { searchText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.vertical, 1)
-            }
-
-            Spacer(minLength: 4)
-
-            // 收起至菜单栏
-            Button(action: {
-                DashboardWindowController.shared.closeWindow()
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 9.5))
-                    Text("收起")
-                        .font(.system(size: 10.5))
-                }
-                .foregroundColor(.secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(Color.primary.opacity(0.05))
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.65))
                 .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
+                .frame(width: 175)
+
+                // 分类筛选胶囊 (流式排列)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(ContextEngine.FilterCategory.allCases) { cat in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    selectedCategory = cat
+                                }
+                            }) {
+                                HStack(spacing: 3) {
+                                    Text(cat.iconOnly).font(.system(size: 9.5))
+                                    Text(cat.nameOnly).font(.system(size: 10.5, weight: selectedCategory == cat ? .semibold : .regular))
+                                }
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4.5)
+                                .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
+                                .foregroundColor(selectedCategory == cat ? themeMgr.currentTheme.accentColor : .secondary)
+                                .cornerRadius(5)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
             }
+        case "chat":
+            Button("清空对话") {
+                chatMessages.removeAll()
+                loadInitialData()
+            }
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4.5)
+            .background(Color.primary.opacity(0.05))
+            .cornerRadius(5)
             .buttonStyle(.plain)
-            .help("收起并常驻菜单栏")
+        case "daily":
+            HStack(spacing: 6) {
+                Button(action: {
+                    if let briefing = dailyWrapUp {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(briefing.markdown, forType: .string)
+                        showToast("已复制今日日报 Markdown")
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.doc")
+                        Text("复制 Markdown")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4.5)
+                    .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                    .foregroundColor(themeMgr.currentTheme.accentColor)
+                    .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { loadDailyReport() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10.5))
+                        .padding(5)
+                        .background(Color.primary.opacity(0.06))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help("重新提炼今日复盘")
+            }
+        case "weekly":
+            HStack(spacing: 6) {
+                Button(action: {
+                    if let wrap = weeklyWrapUp {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(wrap.markdown, forType: .string)
+                        showToast("已复制本周周报 Markdown")
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.doc")
+                        Text("复制 Markdown")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4.5)
+                    .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                    .foregroundColor(themeMgr.currentTheme.accentColor)
+                    .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { loadWeeklyReport() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10.5))
+                        .padding(5)
+                        .background(Color.primary.opacity(0.06))
+                        .cornerRadius(5)
+                }
+                .buttonStyle(.plain)
+                .help("重新提炼本周周报")
+            }
+        default:
+            EmptyView()
         }
     }
 
-    // MARK: - 3. AI 记忆对话专页 (Chat Memory Workspace)
+    // MARK: - 2. 全景时间轴工作区 (Timeline Workspace: 绝对对齐顶栏与安全呼吸边距)
+    private var timelineWorkspace: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            if displaySessions.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 28))
+                        .foregroundColor(.secondary.opacity(0.4))
+                        .padding(.top, 40)
+                    Text(searchText.isEmpty ? "当前分类暂无记录" : "未搜索到匹配的记忆或现场")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 380), spacing: 14)], spacing: 14) {
+                    ForEach(displaySessions) { session in
+                        DashboardSessionCard(
+                            session: session,
+                            isSelected: (selectedSessionId == session.id) || (selectedSessionId == nil && displaySessions.first?.id == session.id),
+                            onSelect: {
+                                selectedSessionId = session.id
+                            },
+                            onRestore: {
+                                engine.restoreSession(id: session.id)
+                            },
+                            onComplete: {
+                                engine.completeSession(id: session.id)
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+        }
+    }
+
+    // MARK: - 3. AI 记忆对话专页 (Chat Memory Workspace: 统一物理基线)
     private var chatMemoryWorkspace: some View {
         VStack(spacing: 0) {
-            // 对话头部工具栏
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .foregroundColor(themeMgr.currentTheme.accentColor)
-                    Text("AI 全局记忆对话搜索")
-                        .font(.system(size: 13, weight: .bold))
-                }
-
-                Spacer()
-
-                Button("清空对话") {
-                    chatMessages.removeAll()
-                    loadInitialData()
-                }
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.35))
-
-            Divider().opacity(0.35)
-
             // 对话消息列表
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
@@ -617,7 +753,8 @@ public struct DashboardView: View {
                             .id("LOADING_INDICATOR")
                         }
                     }
-                    .padding(20)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
                 }
                 .onChange(of: chatMessages.count) { _ in
                     if let last = chatMessages.last?.id {
@@ -670,7 +807,8 @@ public struct DashboardView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(themeMgr.currentTheme.accentColor.opacity(0.25), lineWidth: 1)
             )
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
     }
 
@@ -779,58 +917,10 @@ public struct DashboardView: View {
         }
     }
 
-    // MARK: - 4. 今日全景日报大屏页面 (Daily Report Workspace)
+    // MARK: - 4. 今日全景日报大屏页面 (Daily Report Workspace: 顶栏基线统一)
     private var dailyReportWorkspace: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
-                // 顶部 Hero 统计栏
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "sun.max.fill")
-                                .foregroundColor(themeMgr.currentTheme.accentColor)
-                            Text("☀️ 今日全景复盘与工作日报")
-                                .font(.system(size: 16, weight: .bold))
-                        }
-                        Text("基于 Apple Neural Engine 端侧离线提炼 · 拒绝套话直击业务")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Button(action: {
-                        if let briefing = dailyWrapUp {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(briefing.markdown, forType: .string)
-                            showToast("已复制今日日报 Markdown")
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "doc.on.doc")
-                            Text("复制日报 Markdown")
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(themeMgr.currentTheme.accentColor.opacity(0.12))
-                        .foregroundColor(themeMgr.currentTheme.accentColor)
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: { loadDailyReport() }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11))
-                            .padding(6)
-                            .background(Color.primary.opacity(0.06))
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .help("重新提炼今日复盘")
-                }
-                .padding(.bottom, 4)
-
                 if isGeneratingDaily {
                     HStack(spacing: 10) {
                         ProgressView().scaleEffect(0.7)
@@ -841,7 +931,7 @@ public struct DashboardView: View {
                     .padding(30)
                     .frame(maxWidth: .infinity)
                 } else if let wrapUp = dailyWrapUp {
-                    // 指标卡片
+                    // 统一指标卡片
                     HStack(spacing: 14) {
                         statBadge(title: "今日专注时长", value: "\(wrapUp.totalFocusMinutes) 分钟", icon: "clock.fill")
                         statBadge(title: "攻坚现场总数", value: "\(wrapUp.sessionCount) 个", icon: "bolt.fill")
@@ -915,7 +1005,8 @@ public struct DashboardView: View {
                         .padding(20)
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
     }
 
@@ -929,58 +1020,10 @@ public struct DashboardView: View {
         }
     }
 
-    // MARK: - 5. 本周深度工作周报大屏页面 (Weekly Report Workspace)
+    // MARK: - 5. 本周深度工作周报大屏页面 (Weekly Report Workspace: 顶栏基线统一)
     private var weeklyReportWorkspace: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 18) {
-                // 顶部 Hero 统计栏
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "calendar.badge.clock")
-                                .foregroundColor(themeMgr.currentTheme.accentColor)
-                            Text("📅 本周工作周报与项目投入深度分析")
-                                .font(.system(size: 16, weight: .bold))
-                        }
-                        Text(weeklyWrapUp?.weekRange ?? "跨 7 天工作轨迹聚合 · 包含项目研发投入占比与每日脉络")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Button(action: {
-                        if let wrap = weeklyWrapUp {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(wrap.markdown, forType: .string)
-                            showToast("已复制本周周报 Markdown")
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "doc.on.doc")
-                            Text("复制周报 Markdown")
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(themeMgr.currentTheme.accentColor.opacity(0.12))
-                        .foregroundColor(themeMgr.currentTheme.accentColor)
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: { loadWeeklyReport() }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11))
-                            .padding(6)
-                            .background(Color.primary.opacity(0.06))
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .help("重新提炼本周周报")
-                }
-                .padding(.bottom, 4)
-
                 if isGeneratingWeekly {
                     HStack(spacing: 10) {
                         ProgressView().scaleEffect(0.7)
@@ -991,7 +1034,7 @@ public struct DashboardView: View {
                     .padding(30)
                     .frame(maxWidth: .infinity)
                 } else if let wrap = weeklyWrapUp {
-                    // 指标卡片
+                    // 统一指标卡片
                     HStack(spacing: 14) {
                         statBadge(title: "本周累计专注", value: "\(wrap.totalFocusMinutes) 分钟 (\(String(format: "%.1f", Double(wrap.totalFocusMinutes)/60.0))h)", icon: "clock.badge.checkmark")
                         statBadge(title: "处理攻坚现场", value: "\(wrap.totalSessionCount) 个", icon: "square.grid.3x3.fill")
@@ -1126,7 +1169,8 @@ public struct DashboardView: View {
                         .padding(20)
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
     }
 
@@ -1164,6 +1208,275 @@ public struct DashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
         .cornerRadius(8)
+    }
+
+    // MARK: - 统一右侧辅助面板路由 (Unified Context Inspector)
+    @ViewBuilder
+    private var unifiedContextInspector: some View {
+        switch selectedTab {
+        case "chat":
+            chatContextInspector
+        case "daily", "weekly":
+            reportMetricsInspector
+        default:
+            if let selected = currentSelectedSession {
+                inspectorView(session: selected)
+            } else {
+                emptyInspectorPlaceholder
+            }
+        }
+    }
+
+    // AI 对话专属上下文：关联召回的工作现场与端侧知识库状态
+    private var chatContextInspector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(themeMgr.currentTheme.accentColor.opacity(0.18))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: "quote.bubble.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("关联召回的工作现场")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("当前对话引用的端侧事实上下文")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.top, 14)
+            .padding(.horizontal, 14)
+
+            Divider().opacity(0.35)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("端侧时序知识库已就绪，以下为最近活跃的现场证据：")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.secondary)
+
+                    ForEach(allSessions.prefix(4)) { s in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) {
+                                Image(nsImage: AppIconManager.shared.icon(for: s.primaryApp))
+                                    .resizable()
+                                    .frame(width: 16, height: 16)
+                                Text(s.primaryApp)
+                                    .font(.system(size: 11, weight: .bold))
+                                Spacer()
+                                Text(s.suspendedAgoDescription)
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Text(s.title)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+
+                            if let sug = s.suggestion {
+                                Text(sug)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                            }
+
+                            HStack {
+                                Text("关联度 98%")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1.5)
+                                    .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                                    .foregroundColor(themeMgr.currentTheme.accentColor)
+                                    .cornerRadius(3)
+
+                                Spacer()
+
+                                Button("一键恢复现场") {
+                                    engine.restoreSession(id: s.id)
+                                }
+                                .font(.system(size: 10, weight: .medium))
+                                .buttonStyle(.plain)
+                                .foregroundColor(themeMgr.currentTheme.accentColor)
+                            }
+                        }
+                        .padding(10)
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                        .cornerRadius(8)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
+                    }
+                }
+                .padding(.horizontal, 14)
+            }
+
+            Spacer()
+
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 11))
+                Text("端侧离线向量引擎 · 保护隐私不上传代码")
+                    .font(.system(size: 9.5))
+                    .foregroundColor(.secondary)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
+            .cornerRadius(6)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 12)
+        }
+    }
+
+    // 日报与周报专属上下文：核心指标与研发投入
+    private var reportMetricsInspector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(themeMgr.currentTheme.accentColor.opacity(0.18))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("核心指标与投入速览")
+                        .font(.system(size: 12, weight: .bold))
+                    Text(selectedTab == "daily" ? "今日统计大盘" : "本周跨期聚合")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.top, 14)
+            .padding(.horizontal, 14)
+
+            Divider().opacity(0.35)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(selectedTab == "daily" ? "今日累计专注" : "本周累计专注")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(totalFocusMinutes)")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(themeMgr.currentTheme.accentColor)
+                            Text("分钟")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("攻坚视窗现场总数")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(allSessions.count)")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                            Text("个")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("主攻应用分布")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+
+                        ForEach(Array(Set(allSessions.map { $0.primaryApp })).prefix(4), id: \.self) { app in
+                            HStack(spacing: 6) {
+                                Image(nsImage: AppIconManager.shared.icon(for: app))
+                                    .resizable()
+                                    .frame(width: 14, height: 14)
+                                Text(app)
+                                    .font(.system(size: 11, weight: .medium))
+                                Spacer()
+                                Text("活跃")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+                }
+                .padding(.horizontal, 14)
+            }
+
+            Spacer()
+
+            Button(action: {
+                if selectedTab == "daily", let briefing = dailyWrapUp {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(briefing.markdown, forType: .string)
+                    showToast("已复制今日日报 Markdown")
+                } else if let wrap = weeklyWrapUp {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(wrap.markdown, forType: .string)
+                    showToast("已复制本周周报 Markdown")
+                }
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 11))
+                    Text("导出 Markdown 报告")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                .foregroundColor(themeMgr.currentTheme.accentColor)
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 12)
+        }
+    }
+
+    private var emptyInspectorPlaceholder: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "cursorarrow.click.2")
+                .font(.system(size: 26))
+                .foregroundColor(.secondary.opacity(0.4))
+                .padding(.top, 60)
+            Text("在左侧列表选择卡片")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+            Text("查看该现场关联的所有应用、代码修改及离开快照")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Computed Properties
