@@ -440,6 +440,26 @@ public final class ContextEngine: ObservableObject {
         case doc = "📝 文档"
 
         public var id: String { rawValue }
+
+        public var iconOnly: String {
+            switch self {
+            case .all: return "⚡️"
+            case .dev: return "💻"
+            case .browser: return "🌐"
+            case .chat: return "💬"
+            case .doc: return "📝"
+            }
+        }
+
+        public var nameOnly: String {
+            switch self {
+            case .all: return "全部"
+            case .dev: return "开发"
+            case .browser: return "浏览器"
+            case .chat: return "沟通"
+            case .doc: return "文档"
+            }
+        }
     }
 
     public enum FilterStatus: String, CaseIterable, Identifiable {
@@ -458,6 +478,20 @@ public final class ContextEngine: ObservableObject {
         case thisWeek = "本周"
 
         public var id: String { rawValue }
+    }
+
+    /// 全局记忆自然语言对话检索 (问答)
+    public func askMemory(query: String, completion: @escaping @MainActor (String) -> Void) {
+        var pool: [ContextSession] = []
+        if let active = activeSession { pool.append(active) }
+        pool.append(contentsOf: suspendedSessions)
+        pool.append(contentsOf: completedSessions)
+
+        AISummarizer.shared.askMemory(question: query, recentSessions: pool) { ans in
+            Task { @MainActor in
+                completion(ans)
+            }
+        }
     }
 
     /// 对话与上下文多维检索

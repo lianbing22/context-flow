@@ -17,40 +17,60 @@
 
 ## 📸 界面一览 (Screenshots)
 
-### 🖥️ 全景独立主工作台 (Full Dashboard Workbench)
-> 参考商业级顶级 AI 产品设计，提供侧边栏专注看板、全局语义搜索、离开现场快照微缩矩阵、与右侧 Inspector 详情检查器。支持从菜单栏小浮窗一键放大展开。
+### 🖥️ 1. 全景时间轴主工作台 (Full Timeline Dashboard)
+> 彻底解决视窗挤压，避开红黄绿交通灯，横向紧凑多维分类 Chips（开发、浏览器、沟通、文档），右侧 Inspector 详情检查器与恢复现场大按钮一目了然。
 
 <p align="center">
-  <img src="docs/screenshots/02_dashboard_full.png" alt="全景独立主工作台" width="95%" />
+  <img src="docs/screenshots/02_dashboard_full.png" alt="全景时间轴主工作台" width="95%" />
 </p>
 
-### ⚡️ 核心模块与设置交互
+### 💬 2. AI 记忆对话专页 (Ask Memory Chat)
+> 对标阶跃星AI核心能力，直接针对全景记忆提问（如“今天在微信开发者工具推进了什么”），AI 结合本地真实足迹给出深度提炼答复并列出关联现场证据。
+
+<p align="center">
+  <img src="docs/screenshots/05_chat_memory.png" alt="AI 记忆对话专页" width="95%" />
+</p>
+
+### 📅 3. 日报与周报全景大屏 (Daily & Weekly Wrap-up)
 
 <table align="center">
   <tr>
-    <td align="center" width="25%">
+    <td align="center" width="50%">
+      <strong>☀️ 今日全景复盘日报 (Daily Hub)</strong><br><br>
+      <img src="docs/screenshots/04_daily_briefing.png" alt="今日全景复盘日报" width="100%" />
+      <br>
+      <em>大屏指标看板 · 核心攻坚综述 · 明日规划 · Markdown 一键导出</em>
+    </td>
+    <td align="center" width="50%">
+      <strong>📅 本周工作周报与投入分析 (Weekly Hub)</strong><br><br>
+      <img src="docs/screenshots/06_weekly_report.png" alt="本周工作周报" width="100%" />
+      <br>
+      <em>项目研发投入占比进度条 · 每日脉络追踪 · 下周重点规划</em>
+    </td>
+  </tr>
+</table>
+
+### ⚡️ 4. 快捷浮窗与丰富主题系统
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
       <strong>⚡️ 状态栏快捷浮窗</strong><br><br>
       <img src="docs/screenshots/01_main_panel.png" alt="状态栏快捷浮窗" width="100%" />
       <br>
-      <em>微缩视窗快照 · 下一步行动胶囊 · 分类筛选 Chips</em>
+      <em>微缩视窗快照 · 下一步行动胶囊 · 快速检索</em>
     </td>
-    <td align="center" width="25%">
-      <strong>🎨 丰富主题设置系统</strong><br><br>
+    <td align="center" width="33%">
+      <strong>🎨 5 套专业质感主题</strong><br><br>
       <img src="docs/screenshots/03_settings_themes.png" alt="丰富主题设置系统" width="100%" />
       <br>
-      <em>5 套专业质感主题 · 即时换肤 · 跟随系统/阶跃暖橘</em>
+      <em>阶跃暖橘/极光深邃/电光紫霓/极简纸墨/跟随系统</em>
     </td>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
       <strong>⚙️ 开源配置中心 (BYOK)</strong><br><br>
       <img src="docs/screenshots/03_settings_ai.png" alt="开源配置中心" width="100%" />
       <br>
       <em>支持 DeepSeek / 智谱 / OpenAI / 本地 Ollama</em>
-    </td>
-    <td align="center" width="25%">
-      <strong>📅 日报/周报 双模态复盘</strong><br><br>
-      <img src="docs/screenshots/04_daily_briefing.png" alt="每日智能工作复盘" width="100%" />
-      <br>
-      <em>项目投入占比条 · 每日脉络 · 下周规划 · Markdown 导出</em>
     </td>
   </tr>
 </table>

@@ -48,6 +48,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             handleOpenAction("all")
         } else if args.contains("--dashboard") || args.contains("--open-dashboard") {
             handleOpenAction("dashboard")
+        } else if args.contains("--chat") || args.contains("--open-chat") {
+            handleOpenAction("chat")
+        } else if args.contains("--daily") || args.contains("--open-daily") {
+            handleOpenAction("daily")
+        } else if args.contains("--weekly") || args.contains("--open-weekly") {
+            handleOpenAction("weekly")
         } else if args.contains("--settings") || args.contains("--open-settings") {
             handleOpenAction("settings")
         } else if args.contains("--briefing") || args.contains("--open-briefing") {
@@ -61,7 +67,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             switch action {
             case "dashboard":
-                DashboardWindowController.shared.showWindow()
+                DashboardWindowController.shared.showWindow(tab: "timeline")
+            case "chat":
+                DashboardWindowController.shared.showWindow(tab: "chat")
+            case "daily":
+                DashboardWindowController.shared.showWindow(tab: "daily")
+            case "weekly":
+                DashboardWindowController.shared.showWindow(tab: "weekly")
             case "settings":
                 SettingsWindowController.shared.showWindow()
             case "briefing":
