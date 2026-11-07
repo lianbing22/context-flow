@@ -83,6 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DashboardWindowController.shared.showWindow(tab: "weekly")
             case "settings":
                 SettingsWindowController.shared.showWindow()
+            case "settings-scan":
+                SettingsWindowController.shared.showWindow(tab: "ai")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    NotificationCenter.default.post(name: NSNotification.Name("ContextFlow.TriggerModelScan"), object: nil)
+                }
             case "settings-ai":
                 SettingsWindowController.shared.showWindow(tab: "ai")
             case "settings-privacy":

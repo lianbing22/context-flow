@@ -1,6 +1,12 @@
 # 全局记忆精灵 ⚡️ (ContextFlow)
 
 <p align="center">
+  <a href="README.md"><strong>🇨🇳 简体中文</strong></a> |
+  <a href="README_EN.md">🇺🇸 English</a> |
+  <a href="README_JA.md">🇯🇵 日本語</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS%2013.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/Swift-6.0%20%7C%20SwiftUI-orange?style=flat-square&logo=swift" alt="Swift 6.0" />
   <img src="https://img.shields.io/badge/Database-SQLite3%20WAL%20%2B%20FTS5-blueviolet?style=flat-square" alt="SQLite3 + FTS5" />
@@ -57,14 +63,14 @@
 
 ---
 
-### ⚙️ 4. 现代化偏好设置 (Native Preferences Panel)
-> 彻底重构为原生分段导航栏，杜绝折叠溢出与浮动黑条，排版严整考究。支持自带密钥 (BYOK)、高可用多 Key 智能轮换池、隐私黑名单、数字编年史 GitHub 归档、5 套个性化主题与 SQLite 数据库维护。
+### ⚙️ 4. 现代化偏好设置与本地模型自适应识别 (Native Preferences & Model Auto-Discovery)
+> 彻底重构为原生分段导航栏，杜绝折叠溢出与浮动黑条，排版严整考究。支持自带密钥 (BYOK)、本地大模型 (Ollama, LM Studio) 与开发环境凭据自适应嗅探 (DeepSeek Harness 机制)、高可用多 Key 智能轮换池、隐私黑名单、数字编年史 GitHub 归档、5 套个性化主题与多语言国际化 (i18n)。
 
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <strong>✨ AI 记忆引擎与多 Key 容灾池</strong><br><br>
-      <img src="docs/screenshots/settings_ai.png" alt="AI 记忆引擎与多 Key 容灾池" width="100%" />
+      <strong>🔍 本地大模型与软件环境自适应嗅探</strong><br><br>
+      <img src="docs/screenshots/settings_model_detector.png" alt="本地大模型与软件环境自适应嗅探" width="100%" />
     </td>
     <td align="center" width="50%">
       <strong>📚 数字编年史与 GitHub 私有归档</strong><br><br>
@@ -77,8 +83,8 @@
       <img src="docs/screenshots/settings_privacy.png" alt="隐私保护与应用拦截黑名单" width="100%" />
     </td>
     <td align="center" width="50%">
-      <strong>🎨 5 套精调阶跃质感配色主题</strong><br><br>
-      <img src="docs/screenshots/settings_appearance.png" alt="5 套精调阶跃质感配色主题" width="100%" />
+      <strong>🎨 5 套精调阶跃质感配色与多语言设定 (i18n)</strong><br><br>
+      <img src="docs/screenshots/settings_appearance.png" alt="5 套精调阶跃质感配色与多语言设定" width="100%" />
     </td>
   </tr>
 </table>

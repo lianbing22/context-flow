@@ -56,8 +56,9 @@ public struct SettingsView: View {
     @ObservedObject var engine = ContextEngine.shared
     @ObservedObject var lifelog = LifeLogSyncManager.shared
     @ObservedObject var themeMgr = ThemeManager.shared
+    @ObservedObject var loc = LocalizationManager.shared
 
-    // MARK: - 导航选卡 (绝不用系统 TabView，采用标准 macOS 顶部原生胶囊分段导航)
+    // MARK: - 导航选卡 (标准 macOS 顶部原生胶囊分段导航)
     @State private var currentTab: String = "ai" // ai, privacy, lifelog, appearance, general
 
     // MARK: - AI 配置状态
@@ -71,6 +72,11 @@ public struct SettingsView: View {
     @State private var testResultText: String? = nil
     @State private var isTestSuccess: Bool = false
     @State private var keyTestResults: [KeyTestResult] = []
+
+    // MARK: - 自适应模型与客户端探查状态
+    @State private var isScanningLocalModels: Bool = false
+    @State private var detectionReport: DetectionReport? = nil
+    @State private var adoptSuccessText: String? = nil
 
     // MARK: - 外观与主题状态
     @State private var selectedTheme: AppTheme = ThemeManager.shared.currentTheme
@@ -113,7 +119,7 @@ public struct SettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // 1. 顶部经典分段导航栏 (纯原生平铺，杜绝任何 >> 溢出和怪异浮动菜单)
+            // 1. 顶部经典分段导航栏
             topNavigationBar
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -122,7 +128,7 @@ public struct SettingsView: View {
 
             Divider().opacity(0.4)
 
-            // 2. 主体设置内容区 (标准卡片式人性化排版)
+            // 2. 主体设置内容区
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 16) {
                     switch currentTab {
@@ -159,16 +165,22 @@ public struct SettingsView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ContextFlow.TriggerModelScan"))) { _ in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                self.currentTab = "ai"
+            }
+            self.triggerScanLocalModels()
+        }
     }
 
     // MARK: - 顶部导航栏
     private var topNavigationBar: some View {
         HStack(spacing: 6) {
-            tabNavButton(id: "ai", title: "AI 记忆引擎", icon: "sparkles")
-            tabNavButton(id: "privacy", title: "隐私与黑名单", icon: "hand.raised.fill")
-            tabNavButton(id: "lifelog", title: "数字编年史", icon: "book.closed.fill")
-            tabNavButton(id: "appearance", title: "外观与主题", icon: "paintpalette.fill")
-            tabNavButton(id: "general", title: "权限与维护", icon: "gearshape.fill")
+            tabNavButton(id: "ai", title: loc.t("tab_ai"), icon: "sparkles")
+            tabNavButton(id: "privacy", title: loc.t("tab_privacy"), icon: "hand.raised.fill")
+            tabNavButton(id: "lifelog", title: loc.t("tab_lifelog"), icon: "book.closed.fill")
+            tabNavButton(id: "appearance", title: loc.t("tab_appearance"), icon: "paintpalette.fill")
+            tabNavButton(id: "general", title: loc.t("tab_general"), icon: "gearshape.fill")
         }
         .padding(3)
         .background(Color.primary.opacity(0.06))
@@ -206,14 +218,14 @@ public struct SettingsView: View {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
-                Text("全局记忆精灵 开源版 · 数据均本地化存储在 ~/.contextflow")
+                Text("全局记忆精灵 · 数据均本地化存储在 ~/.contextflow")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
 
             Spacer()
 
-            Button("重置默认") {
+            Button(loc.t("btn_reset")) {
                 resetToDefaults()
             }
             .controlSize(.regular)
@@ -222,7 +234,7 @@ public struct SettingsView: View {
                 saveAllSettings()
                 NSApp.keyWindow?.close()
             }) {
-                Text("保存配置")
+                Text(loc.t("btn_save"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
@@ -238,9 +250,126 @@ public struct SettingsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    // MARK: - Tab 1: AI 记忆引擎 (BYOK 与多 Key 容灾池)
+    // MARK: - Tab 1: AI 记忆引擎 (BYOK 与多 Key 容灾池 + 自适应本地大模型发现)
     private var aiTabContent: some View {
         VStack(spacing: 14) {
+            // 卡片 0: 自适应识别本地大模型与软件配置
+            cardContainer(
+                title: "🔍 本地大模型与软件环境自适应嗅探",
+                badge: isScanningLocalModels ? "并发探测中..." : (detectionReport != nil ? "发现 \(detectionReport!.services.count) 端点 / \(detectionReport!.installedApps.count) 软件" : "DeepSeek Harness 机制")
+            ) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("自适应识别本地各种模型和软件，兼容主流模型软件授权与环境变量一键导入。")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Button(action: {
+                            triggerScanLocalModels()
+                        }) {
+                            HStack(spacing: 4) {
+                                if isScanningLocalModels {
+                                    ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
+                                    Text("正在嗅探...")
+                                } else {
+                                    Image(systemName: "sparkle.magnifyingglass")
+                                    Text("一键智能探测")
+                                }
+                            }
+                            .font(.system(size: 11.5, weight: .medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isScanningLocalModels)
+                    }
+
+                    if let alert = adoptSuccessText {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                            Text(alert).font(.system(size: 11, weight: .semibold)).foregroundColor(.green)
+                        }
+                        .padding(6)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(6)
+                    }
+
+                    // 报告回显
+                    if let rep = detectionReport {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !rep.services.isEmpty {
+                                Text("发现的可用大模型服务与凭据：")
+                                    .font(.system(size: 10.5, weight: .bold))
+                                    .foregroundColor(.secondary)
+
+                                ForEach(rep.services) { s in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: s.isLocalOffline ? "desktopcomputer" : "cloud.fill")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(themeMgr.currentTheme.accentColor)
+
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            HStack(spacing: 4) {
+                                                Text(s.name).font(.system(size: 11.5, weight: .semibold))
+                                                Text("(\(s.sourceDescription))")
+                                                    .font(.system(size: 9.5))
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            Text("端点: \(s.baseURL) · 模型: \(s.models.prefix(2).joined(separator: ", "))")
+                                                .font(.system(size: 10, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Button("一键装配") {
+                                            adoptDiscoveredService(s)
+                                        }
+                                        .controlSize(.small)
+                                    }
+                                    .padding(8)
+                                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                                    .cornerRadius(6)
+                                }
+                            }
+
+                            if !rep.installedApps.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("已识别并联动的本地开发与 AI 软件：")
+                                        .font(.system(size: 10.5, weight: .bold))
+                                        .foregroundColor(.secondary)
+
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 6) {
+                                            ForEach(rep.installedApps) { app in
+                                                HStack(spacing: 4) {
+                                                    Circle().fill(app.isRunning ? Color.green : Color.secondary.opacity(0.4)).frame(width: 5, height: 5)
+                                                    Text(app.name).font(.system(size: 10.5))
+                                                }
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3.5)
+                                                .background(Color.primary.opacity(0.05))
+                                                .cornerRadius(5)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(10)
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+
             // 卡片 1: 服务商预设
             cardContainer(title: "服务商预设 (自带密钥 BYOK)", badge: "兼容 OpenAI 标准协议") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -326,7 +455,7 @@ public struct SettingsView: View {
                                     .cornerRadius(6)
                                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
                             } else {
-                                SecureField("粘贴您的 API Key，支持多行或逗号录入多个 Key", text: $aiApiKey)
+                                SecureField("粘贴您的 API Key，支持多行或逗号录入多个 Key 组建容灾池", text: $aiApiKey)
                                     .textFieldStyle(.roundedBorder)
                             }
 
@@ -396,6 +525,37 @@ public struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.primary.opacity(0.04))
             .cornerRadius(8)
+        }
+    }
+
+    // MARK: - 触发本地模型与软件嗅探
+    private func triggerScanLocalModels() {
+        isScanningLocalModels = true
+        adoptSuccessText = nil
+        ModelDetector.shared.scanAll { report in
+            Task { @MainActor in
+                self.isScanningLocalModels = false
+                self.detectionReport = report
+            }
+        }
+    }
+
+    private func adoptDiscoveredService(_ service: DiscoveredModelService) {
+        self.selectedProvider = service.provider
+        self.aiBaseURL = service.baseURL
+        if let first = service.models.first {
+            self.aiModel = first
+        }
+        if let k = service.detectedKey, !k.isEmpty && k != "ollama" {
+            if self.aiApiKey.isEmpty {
+                self.aiApiKey = k
+            } else if !self.aiApiKey.contains(k) {
+                self.aiApiKey += "\n" + k
+            }
+        }
+        saveAllSettings()
+        withAnimation {
+            adoptSuccessText = "已成功装配 [\(service.name)]，配置已即时生效！"
         }
     }
 
@@ -550,9 +710,28 @@ public struct SettingsView: View {
         }
     }
 
-    // MARK: - Tab 4: 外观与个性主题设置
+    // MARK: - Tab 4: 外观、个性主题与语言设定
     private var appearanceTabContent: some View {
         VStack(spacing: 14) {
+            // 语言设置
+            cardContainer(title: "界面语言设定 (Language / 言語)", badge: loc.currentLanguage.displayName) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("支持中文、英文与日文界面自适应切换，切换后即刻全局生效。")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+
+                    Picker("显示语言：", selection: Binding(
+                        get: { loc.currentLanguage },
+                        set: { newLang in loc.setLanguage(newLang) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Text(lang.displayName).tag(lang)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+
             cardContainer(title: "视觉质感与主题配色", badge: "5 套精调色彩") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("选择适合您工作习惯的主题风格。切换立即生效于全景大工作台与菜单栏小窗口。")
