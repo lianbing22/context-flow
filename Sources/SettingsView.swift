@@ -220,6 +220,7 @@ public struct SettingsView: View {
         Form {
             Section(header: Text("服务提供商预设 (自带密钥 BYOK)").font(.headline)) {
                 Picker("快捷预设：", selection: $selectedProvider) {
+                    Text("Agnes AI (官方高速)").tag("agnes")
                     Text("DeepSeek (官方)").tag("deepseek")
                     Text("智谱 GLM-4-Flash").tag("zhipu")
                     Text("OpenAI (官方)").tag("openai")
@@ -231,7 +232,7 @@ public struct SettingsView: View {
                     applyProviderPreset(provider)
                 }
 
-                Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 DeepSeek、智谱、通义千问、Kimi 或本地大模型。")
+                Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 Agnes AI、DeepSeek、智谱、通义千问或本地大模型。")
                     .font(.system(size: 10.5))
                     .foregroundColor(.secondary)
             }
@@ -299,6 +300,9 @@ public struct SettingsView: View {
 
     private func applyProviderPreset(_ provider: String) {
         switch provider {
+        case "agnes":
+            aiBaseURL = "https://apihub.agnes-ai.com/v1"
+            aiModel = "agnes-3.0-flash"
         case "deepseek":
             aiBaseURL = "https://api.deepseek.com/v1"
             aiModel = "deepseek-chat"
