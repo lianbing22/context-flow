@@ -137,4 +137,125 @@ public struct DailyWrapUp: Codable, Sendable {
         self.sessionCount = sessionCount
         self.suggestions = suggestions
     }
+
+    public var markdown: String {
+        var md = "# ☀️ 全局工作日报 (\(date))\n\n"
+        md += "### 🎯 今日核心成果\n\(summary)\n\n"
+        md += "### ⏱ 专注与业务分布\n"
+        let hours = String(format: "%.1f", Double(totalFocusMinutes) / 60.0)
+        md += "- 累计专注时长: \(totalFocusMinutes) 分钟 (约 \(hours) 小时)\n"
+        md += "- 攻坚业务现场: \(sessionCount) 个\n"
+        if !keyProjects.isEmpty {
+            md += "- 核心业务项目: \(keyProjects.joined(separator: "、"))\n"
+        }
+        if !suggestions.isEmpty {
+            md += "\n### ⏳ 待办与跟进建议\n"
+            md += suggestions.map { "• " + $0 }.joined(separator: "\n")
+            md += "\n"
+        }
+        md += "---\n*本工作日报由 全局记忆精灵 (ContextFlow) 智能提炼生成*"
+        return md
+    }
+}
+
+// MARK: - 周报数据结构与分布
+
+public struct ProjectTimeShare: Codable, Sendable, Identifiable {
+    public var id: String { projectName }
+    public let projectName: String
+    public let focusMinutes: Int
+    public let percentage: Int
+    public let primaryApp: String
+
+    public init(projectName: String, focusMinutes: Int, percentage: Int, primaryApp: String) {
+        self.projectName = projectName
+        self.focusMinutes = focusMinutes
+        self.percentage = percentage
+        self.primaryApp = primaryApp
+    }
+}
+
+public struct DailyBriefSummary: Codable, Sendable, Identifiable {
+    public var id: String { date }
+    public let date: String
+    public let dayOfWeek: String
+    public let focusMinutes: Int
+    public let sessionCount: Int
+    public let highlight: String
+
+    public init(date: String, dayOfWeek: String, focusMinutes: Int, sessionCount: Int, highlight: String) {
+        self.date = date
+        self.dayOfWeek = dayOfWeek
+        self.focusMinutes = focusMinutes
+        self.sessionCount = sessionCount
+        self.highlight = highlight
+    }
+}
+
+public struct WeeklyWrapUp: Codable, Sendable {
+    public let weekRange: String
+    public let generatedAt: Date
+    public let summary: String
+    public let totalFocusMinutes: Int
+    public let totalSessionCount: Int
+    public let projectDistribution: [ProjectTimeShare]
+    public let dailyBreakdown: [DailyBriefSummary]
+    public let nextWeekPlans: [String]
+
+    public init(
+        weekRange: String,
+        generatedAt: Date = Date(),
+        summary: String,
+        totalFocusMinutes: Int,
+        totalSessionCount: Int,
+        projectDistribution: [ProjectTimeShare],
+        dailyBreakdown: [DailyBriefSummary] = [],
+        nextWeekPlans: [String] = []
+    ) {
+        self.weekRange = weekRange
+        self.generatedAt = generatedAt
+        self.summary = summary
+        self.totalFocusMinutes = totalFocusMinutes
+        self.totalSessionCount = totalSessionCount
+        self.projectDistribution = projectDistribution
+        self.dailyBreakdown = dailyBreakdown
+        self.nextWeekPlans = nextWeekPlans
+    }
+
+    public var markdown: String {
+        var md = "# 📅 全局工作周报 (\(weekRange))\n\n"
+        md += "### 🎯 本周核心攻坚与产出综述\n\(summary)\n\n"
+        md += "### ⏱ 本周整体投入\n"
+        let hours = String(format: "%.1f", Double(totalFocusMinutes) / 60.0)
+        md += "- 累计专注时长: \(totalFocusMinutes) 分钟 (约 \(hours) 小时)\n"
+        md += "- 攻坚业务现场: \(totalSessionCount) 个\n\n"
+
+        if !projectDistribution.isEmpty {
+            md += "### 📊 项目时间分布与研发占比\n"
+            for p in projectDistribution {
+                let pHours = String(format: "%.1f", Double(p.focusMinutes) / 60.0)
+                md += "- **\(p.projectName)**: \(p.percentage)% (\(p.focusMinutes) 分钟 / \(pHours)h) · 主力工具: \(p.primaryApp)\n"
+            }
+            md += "\n"
+        }
+
+        if !dailyBreakdown.isEmpty {
+            md += "### 🗓 本周每日工作脉络\n"
+            for d in dailyBreakdown {
+                md += "- **\(d.date) (\(d.dayOfWeek))**: \(d.focusMinutes) 分钟 / \(d.sessionCount) 现场 — \(d.highlight)\n"
+            }
+            md += "\n"
+        }
+
+        if !nextWeekPlans.isEmpty {
+            md += "### 🚀 下周关键攻坚与推进规划\n"
+            for plan in nextWeekPlans {
+                md += "- \(plan)\n"
+            }
+            md += "\n"
+        }
+
+        md += "---\n*本工作周报由 全局记忆精灵 (ContextFlow) 智能提炼生成*"
+        return md
+    }
 }

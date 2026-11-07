@@ -4,20 +4,29 @@ import Cocoa
 public struct MainPopoverView: View {
     @ObservedObject var engine = ContextEngine.shared
     @ObservedObject var lifelog = LifeLogSyncManager.shared
+    @ObservedObject var themeMgr = ThemeManager.shared
 
     @State private var editingNoteSessionId: UUID? = nil
     @State private var noteInputText: String = ""
     @State private var showCompletedList: Bool = false
 
-    // 全局记忆问答状态
+    // 全局记忆问答与对话搜索状态
     @State private var memoryQueryText: String = ""
     @State private var memoryAnswerText: String? = nil
     @State private var isAskingMemory: Bool = false
     @State private var isWrapUpGenerating: Bool = false
+    @State private var selectedCategory: ContextEngine.FilterCategory = .all
 
-    // 借鉴阶跃AI：全景晨间简报 / 每日工作复盘弹窗
+    // 借鉴阶跃AI：全景复盘中心 (日报 / 周报) 弹窗
     @State private var activeBriefing: DailyWrapUp? = nil
     @State private var showingBriefingSheet: Bool = false
+
+    private var filteredSuspendedSessions: [ContextSession] {
+        if memoryQueryText.trimmingCharacters(in: .whitespaces).isEmpty && selectedCategory == .all {
+            return engine.suspendedSessions
+        }
+        return engine.searchSessions(query: memoryQueryText, category: selectedCategory, status: .suspended, timeRange: .all)
+    }
 
     public init() {}
 
@@ -158,10 +167,10 @@ public struct MainPopoverView: View {
                 } else {
                     Image(systemName: "sparkles")
                         .font(.system(size: 11))
-                        .foregroundColor(.orange)
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
                 }
 
-                TextField("向全局记忆提问 (如: 今天改了什么代码 / 哪个模块重构了)", text: $memoryQueryText, onCommit: {
+                TextField("对话搜索 / 问问全局记忆 (如: 今天改了什么代码 / 微信)", text: $memoryQueryText, onCommit: {
                     performAskMemory()
                 })
                 .textFieldStyle(.plain)
@@ -183,7 +192,7 @@ public struct MainPopoverView: View {
                     }) {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(.orange)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
                     }
                     .buttonStyle(.plain)
                 }
@@ -196,6 +205,29 @@ public struct MainPopoverView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
+
+            // 多维分类快捷过滤 Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(ContextEngine.FilterCategory.allCases) { cat in
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedCategory = cat
+                            }
+                        }) {
+                            Text(cat.rawValue)
+                                .font(.system(size: 10, weight: selectedCategory == cat ? .semibold : .regular))
+                                .foregroundColor(selectedCategory == cat ? .white : .secondary)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2.5)
+                                .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor : Color.primary.opacity(0.06))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
 
             // 智能回答卡片 (通透折叠气泡)
             if let ans = memoryAnswerText {
@@ -385,18 +417,33 @@ public struct MainPopoverView: View {
                     Text("挂起现场 (防遗漏)")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
+                    if !memoryQueryText.isEmpty || selectedCategory != .all {
+                        Text("(\(filteredSuspendedSessions.count))")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
+                    }
                 }
                 Spacer()
+
+                if !memoryQueryText.isEmpty || selectedCategory != .all {
+                    Button("重置筛选") {
+                        memoryQueryText = ""
+                        selectedCategory = .all
+                    }
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, 2)
 
-            if engine.suspendedSessions.isEmpty {
+            if filteredSuspendedSessions.isEmpty {
                 VStack(spacing: 5) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 20))
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 18))
                         .foregroundColor(.secondary.opacity(0.5))
                         .padding(.top, 4)
-                    Text("没有遗漏的现场")
+                    Text(memoryQueryText.isEmpty ? "没有该分类下的遗漏现场" : "未找到匹配的对话或现场")
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -405,7 +452,7 @@ public struct MainPopoverView: View {
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.25))
                 .cornerRadius(10)
             } else {
-                ForEach(engine.suspendedSessions) { session in
+                ForEach(filteredSuspendedSessions) { session in
                     SuspendedSessionCard(
                         session: session,
                         isEditingNote: editingNoteSessionId == session.id,
@@ -809,26 +856,44 @@ struct SuspendedSessionCard: View {
     }
 }
 
-// MARK: - 借鉴阶跃AI：全景晨间简报 / 每日复盘大卡片 (Daily Briefing Modal)
+// MARK: - 借鉴阶跃AI：全景复盘中心 (支持 日报 / 周报 双模态切换)
 
 struct DailyBriefingModal: View {
     let briefing: DailyWrapUp
+    var initialReportMode: Int = 0 // 0: 日报, 1: 周报
     let onClose: () -> Void
     var isStandaloneWindow: Bool = false
+    @ObservedObject var themeMgr = ThemeManager.shared
+    @State private var reportMode: Int = 0
     @State private var copied: Bool = false
+    @State private var weeklyWrapUp: WeeklyWrapUp? = nil
+    @State private var isGeneratingWeekly: Bool = false
 
     var body: some View {
         let cardContent = VStack(alignment: .leading, spacing: 10) {
-            // 顶部标题与关闭按钮
+            // 顶部标题与模式切换 (日报 / 周报)
             HStack {
                 HStack(spacing: 6) {
-                    Image(systemName: "sun.max.fill")
-                        .foregroundColor(.orange)
-                    Text("☀️ 今日全景复盘与任务规划")
+                    Image(systemName: reportMode == 0 ? "sun.max.fill" : "calendar.badge.clock")
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                    Text(reportMode == 0 ? "☀️ 今日全景日报" : "📅 本周工作周报")
                         .font(.system(size: 13, weight: .bold))
                 }
 
                 Spacer()
+
+                // 日报 / 周报切换器
+                Picker("", selection: $reportMode) {
+                    Text("日报").tag(0)
+                    Text("周报").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 120)
+                .onChange(of: reportMode) { mode in
+                    if mode == 1 && weeklyWrapUp == nil {
+                        loadWeeklyData()
+                    }
+                }
 
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
@@ -836,81 +901,25 @@ struct DailyBriefingModal: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .padding(.leading, 4)
             }
 
             Divider()
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 8) {
-                    // 核心总结
-                    Text(briefing.summary)
-                        .font(.system(size: 11.5))
-                        .lineSpacing(4)
-                        .foregroundColor(.primary)
-
-                    // 关键指标标签
-                    HStack(spacing: 8) {
-                        HStack(spacing: 4) {
-                            Text("总专注时长:")
-                                .foregroundColor(.secondary)
-                            Text("\(briefing.totalFocusMinutes) 分钟")
-                                .fontWeight(.semibold)
-                        }
-                        .font(.system(size: 10.5))
-
-                        HStack(spacing: 4) {
-                            Text("处理任务现场:")
-                                .foregroundColor(.secondary)
-                            Text("\(briefing.sessionCount) 个")
-                                .fontWeight(.semibold)
-                        }
-                        .font(.system(size: 10.5))
-                    }
-                    .padding(.vertical, 4)
-
-                    // 核心攻坚项目
-                    if !briefing.keyProjects.isEmpty {
-                        Text("🎯 今日攻坚项目：")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                        HStack(spacing: 5) {
-                            ForEach(briefing.keyProjects, id: \.self) { p in
-                                Text(p)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue.opacity(0.1))
-                                    .foregroundColor(.blue)
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
-
-                    // 明日行动建议
-                    if !briefing.suggestions.isEmpty {
-                        Divider().padding(.vertical, 2)
-                        Text("⏳ 待办与明日跟进：")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                        ForEach(briefing.suggestions, id: \.self) { sug in
-                            HStack(alignment: .top, spacing: 4) {
-                                Text("•")
-                                    .foregroundColor(.orange)
-                                Text(sug)
-                                    .font(.system(size: 10.5))
-                            }
-                        }
-                    }
+                if reportMode == 0 {
+                    dailyReportView
+                } else {
+                    weeklyReportView
                 }
-                .padding(12)
             }
-            .frame(maxHeight: 260)
+            .frame(maxHeight: 270)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
             .cornerRadius(8)
 
             // 底部操作区
             HStack {
-                Text("已同步至 GitHub 私有编年史")
+                Text(reportMode == 0 ? "已归档至本地编年史" : "本周跨天工作轨迹聚合")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
 
@@ -918,20 +927,8 @@ struct DailyBriefingModal: View {
 
                 Button(action: {
                     NSPasteboard.general.clearContents()
-                    var md = "# ☀️ 全局工作复盘报告 (\(briefing.date))\n\n"
-                    md += "### 🎯 核心工作成果\n\(briefing.summary)\n\n"
-                    md += "### ⏱ 专注与业务分布\n"
-                    md += "- 累计专注: \(briefing.totalFocusMinutes) 分钟\n"
-                    md += "- 处理业务现场: \(briefing.sessionCount) 个\n"
-                    if !briefing.keyProjects.isEmpty {
-                        md += "- 核心攻坚业务: \(briefing.keyProjects.joined(separator: "、"))\n"
-                    }
-                    if !briefing.suggestions.isEmpty {
-                        md += "\n### ⏳ 待办与跟进建议\n"
-                        md += briefing.suggestions.map { "• " + $0 }.joined(separator: "\n")
-                        md += "\n"
-                    }
-                    NSPasteboard.general.setString(md, forType: .string)
+                    let mdText = reportMode == 0 ? briefing.markdown : (weeklyWrapUp?.markdown ?? briefing.markdown)
+                    NSPasteboard.general.setString(mdText, forType: .string)
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         copied = false
@@ -939,7 +936,7 @@ struct DailyBriefingModal: View {
                 }) {
                     HStack(spacing: 3) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        Text(copied ? "已复制" : "复制 Markdown")
+                        Text(copied ? "已复制" : (reportMode == 0 ? "复制日报 Markdown" : "复制周报 Markdown"))
                     }
                     .font(.system(size: 10.5, weight: .medium))
                     .padding(.horizontal, 8)
@@ -953,7 +950,7 @@ struct DailyBriefingModal: View {
                     .font(.system(size: 10.5, weight: .semibold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color.orange)
+                    .background(themeMgr.currentTheme.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(5)
                     .buttonStyle(.plain)
@@ -963,10 +960,16 @@ struct DailyBriefingModal: View {
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
+        .onAppear {
+            self.reportMode = initialReportMode
+            if initialReportMode == 1 {
+                loadWeeklyData()
+            }
+        }
 
         if isStandaloneWindow {
             cardContent
-                .frame(width: 440, height: 490)
+                .frame(width: 460, height: 500)
                 .padding(10)
         } else {
             ZStack {
@@ -977,6 +980,200 @@ struct DailyBriefingModal: View {
                     }
                 cardContent
                     .padding(12)
+            }
+        }
+    }
+
+    private var dailyReportView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 核心总结
+            Text(briefing.summary)
+                .font(.system(size: 11.5))
+                .lineSpacing(4)
+                .foregroundColor(.primary)
+
+            // 关键指标标签
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Text("总专注时长:")
+                        .foregroundColor(.secondary)
+                    Text("\(briefing.totalFocusMinutes) 分钟")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 10.5))
+
+                HStack(spacing: 4) {
+                    Text("处理任务现场:")
+                        .foregroundColor(.secondary)
+                    Text("\(briefing.sessionCount) 个")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 10.5))
+            }
+            .padding(.vertical, 4)
+
+            // 核心攻坚项目
+            if !briefing.keyProjects.isEmpty {
+                Text("🎯 今日攻坚项目：")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                HStack(spacing: 5) {
+                    ForEach(briefing.keyProjects, id: \.self) { p in
+                        Text(p)
+                            .font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(themeMgr.currentTheme.badgeBackground)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
+                            .cornerRadius(4)
+                    }
+                }
+            }
+
+            // 明日行动建议
+            if !briefing.suggestions.isEmpty {
+                Divider().padding(.vertical, 2)
+                Text("⏳ 待办与明日跟进：")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                ForEach(briefing.suggestions, id: \.self) { sug in
+                    HStack(alignment: .top, spacing: 4) {
+                        Text("•")
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
+                        Text(sug)
+                            .font(.system(size: 10.5))
+                    }
+                }
+            }
+        }
+        .padding(12)
+    }
+
+    private var weeklyReportView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isGeneratingWeekly {
+                HStack {
+                    ProgressView().scaleEffect(0.7)
+                    Text("正在聚合并提炼本周跨天工作轨迹与项目分布...")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 20)
+            } else if let weekly = weeklyWrapUp {
+                // 1. 本周核心综述
+                Text(weekly.summary)
+                    .font(.system(size: 11.5))
+                    .lineSpacing(4)
+                    .foregroundColor(.primary)
+
+                // 2. 统计指标
+                HStack(spacing: 8) {
+                    let hours = String(format: "%.1f", Double(weekly.totalFocusMinutes) / 60.0)
+                    HStack(spacing: 4) {
+                        Text("本周累计专注:")
+                            .foregroundColor(.secondary)
+                        Text("\(weekly.totalFocusMinutes) 分钟 (\(hours)h)")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.system(size: 10.5))
+
+                    HStack(spacing: 4) {
+                        Text("攻坚现场:")
+                            .foregroundColor(.secondary)
+                        Text("\(weekly.totalSessionCount) 个")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.system(size: 10.5))
+                }
+                .padding(.vertical, 2)
+
+                // 3. 项目时间投入占比分布
+                if !weekly.projectDistribution.isEmpty {
+                    Divider().padding(.vertical, 2)
+                    Text("📊 项目研发时间投入占比：")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        ForEach(weekly.projectDistribution.prefix(4)) { p in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Text(p.projectName)
+                                        .font(.system(size: 10.5, weight: .medium))
+                                    Spacer()
+                                    Text("\(p.percentage)% · \(p.focusMinutes)分钟 (\(p.primaryApp))")
+                                        .font(.system(size: 9.5))
+                                        .foregroundColor(.secondary)
+                                }
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(Color.primary.opacity(0.08))
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(themeMgr.currentTheme.accentColor)
+                                            .frame(width: max(4, geo.size.width * CGFloat(p.percentage) / 100.0))
+                                    }
+                                }
+                                .frame(height: 4)
+                            }
+                        }
+                    }
+                }
+
+                // 4. 每日工作脉络
+                if !weekly.dailyBreakdown.isEmpty {
+                    Divider().padding(.vertical, 2)
+                    Text("🗓 每日攻坚脉络：")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    ForEach(weekly.dailyBreakdown.suffix(5)) { d in
+                        HStack(alignment: .top, spacing: 4) {
+                            Text("\(d.date) (\(d.dayOfWeek)):")
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Text(d.highlight)
+                                .font(.system(size: 10))
+                                .lineLimit(1)
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+
+                // 5. 下周关键规划
+                if !weekly.nextWeekPlans.isEmpty {
+                    Divider().padding(.vertical, 2)
+                    Text("🚀 下周重点规划与跟进：")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+
+                    ForEach(weekly.nextWeekPlans, id: \.self) { plan in
+                        HStack(alignment: .top, spacing: 4) {
+                            Text("•")
+                                .foregroundColor(themeMgr.currentTheme.accentColor)
+                            Text(plan)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            } else {
+                Text("暂无本周足够的工作轨迹，请持续使用以积累周报数据。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 10)
+            }
+        }
+        .padding(12)
+    }
+
+    private func loadWeeklyData() {
+        guard weeklyWrapUp == nil, !isGeneratingWeekly else { return }
+        isGeneratingWeekly = true
+        ContextEngine.shared.generateThisWeekWrapUp { wrapUp in
+            Task { @MainActor in
+                self.isGeneratingWeekly = false
+                self.weeklyWrapUp = wrapUp
             }
         }
     }

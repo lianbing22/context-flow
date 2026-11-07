@@ -21,6 +21,9 @@ public struct AppSettings: Codable, Sendable {
     // MARK: - 4. 隐私黑名单
     public var customIgnoredApps: [String] // 用户自定义忽略的应用名单 (如 1Password, 银行等)
 
+    // MARK: - 5. 外观与主题
+    public var theme: String               // system, amber, aurora, neon, paper
+
     public init(
         aiProvider: String = "deepseek",
         aiBaseURL: String = "https://api.deepseek.com/v1",
@@ -33,7 +36,8 @@ public struct AppSettings: Codable, Sendable {
         transientThresholdSeconds: Int = 30,
         maxDisplaySuspended: Int = 5,
         enableThumbnails: Bool = true,
-        customIgnoredApps: [String] = ["1Password", "KeePassXC", "Keychain Access"]
+        customIgnoredApps: [String] = ["1Password", "KeePassXC", "Keychain Access"],
+        theme: String = "amber"
     ) {
         self.aiProvider = aiProvider
         self.aiBaseURL = aiBaseURL
@@ -47,6 +51,7 @@ public struct AppSettings: Codable, Sendable {
         self.maxDisplaySuspended = maxDisplaySuspended
         self.enableThumbnails = enableThumbnails
         self.customIgnoredApps = customIgnoredApps
+        self.theme = theme
     }
 }
 

@@ -337,6 +337,146 @@ public final class AISummarizer: @unchecked Sendable {
         )
     }
 
+    /// 生成每周工作全景周报 (Weekly Wrap-Up)
+    public func generateWeeklyWrapUp(weekRange: String, sessions: [ContextSession], completion: @escaping @Sendable (WeeklyWrapUp?) -> Void) {
+        guard !sessions.isEmpty else {
+            completion(nil)
+            return
+        }
+
+        let settings = ContextStore.shared.load().settings
+        let key = settings.aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let totalSeconds = sessions.reduce(0) { $0 + $1.totalActiveSeconds }
+        let totalMinutes = max(1, totalSeconds / 60)
+        let totalCount = sessions.count
+
+        // 1. 项目耗时与分布聚类
+        var projectMinutesMap: [String: (mins: Int, primaryApp: String)] = [:]
+        for s in sessions {
+            let p = s.detectedProject ?? s.primaryApp
+            let dur = max(1, s.totalActiveSeconds / 60)
+            if let existing = projectMinutesMap[p] {
+                projectMinutesMap[p] = (mins: existing.mins + dur, primaryApp: s.primaryApp)
+            } else {
+                projectMinutesMap[p] = (mins: dur, primaryApp: s.primaryApp)
+            }
+        }
+
+        var mutableProjectShares: [ProjectTimeShare] = []
+        for (pName, info) in projectMinutesMap.sorted(by: { $0.value.mins > $1.value.mins }) {
+            let pct = max(1, Int(Double(info.mins) / Double(max(1, totalMinutes)) * 100))
+            mutableProjectShares.append(ProjectTimeShare(projectName: pName, focusMinutes: info.mins, percentage: min(100, pct), primaryApp: info.primaryApp))
+        }
+        let projectShares = mutableProjectShares
+
+        // 2. 每日脉络概览
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        let dayFmt = DateFormatter()
+        dayFmt.locale = Locale(identifier: "zh_CN")
+        dayFmt.dateFormat = "E"
+
+        let groupedByDay = Dictionary(grouping: sessions) { df.string(from: $0.lastActiveAt) }
+        var mutableDailySummaries: [DailyBriefSummary] = []
+        for (dayStr, daySessions) in groupedByDay.sorted(by: { $0.key < $1.key }) {
+            let dayMins = daySessions.reduce(0) { $0 + max(1, $1.totalActiveSeconds / 60) }
+            let sampleDate = daySessions.first?.lastActiveAt ?? Date()
+            let dayOfWeek = dayFmt.string(from: sampleDate)
+            let topHighlights = daySessions.prefix(2).map { $0.aiSummary ?? $0.title }.joined(separator: "；")
+            mutableDailySummaries.append(DailyBriefSummary(
+                date: dayStr,
+                dayOfWeek: dayOfWeek,
+                focusMinutes: dayMins,
+                sessionCount: daySessions.count,
+                highlight: topHighlights.isEmpty ? "核心业务研发推进" : topHighlights
+            ))
+        }
+        let dailySummaries = mutableDailySummaries
+
+        // 本地离线兜底周报 (完全无需云端 Key)
+        let topProjectsStr = projectShares.prefix(3).map { "\($0.projectName)(\($0.percentage)%)" }.joined(separator: "、")
+        let localWeeklySummary = "本周累计专注 \(totalMinutes) 分钟（约 \(String(format: "%.1f", Double(totalMinutes)/60.0)) 小时），处理 \(totalCount) 个工作现场。攻坚核心集中于 \(topProjectsStr)。各项目按计划顺利交付并达成里程碑。"
+        let localWeeklyWrapUp = WeeklyWrapUp(
+            weekRange: weekRange,
+            summary: localWeeklySummary,
+            totalFocusMinutes: totalMinutes,
+            totalSessionCount: totalCount,
+            projectDistribution: projectShares,
+            dailyBreakdown: dailySummaries,
+            nextWeekPlans: [
+                "深化 \(projectShares.first?.projectName ?? "核心项目") 的功能模块迭代与测试",
+                "对本周新交付的架构与组件进行持续跟踪与稳定性验证",
+                "推进下一阶段需求对齐与工程化自动化部署"
+            ]
+        )
+
+        if key.isEmpty && settings.aiProvider != "ollama" {
+            completion(localWeeklyWrapUp)
+            return
+        }
+
+        // 大模型深度周报提炼
+        let systemPrompt = """
+        你是一个拥有顶级洞察力的高级项目总监与数字化工作复盘专家。
+        根据用户过去一周在 macOS 上的工作轨迹与各项目时间投入统计，生成一份专业、结构严密、可以直接用于团队周例会或管理汇报的【工作周报】。
+
+        【输出硬性要求】：
+        1. 严禁凭空捏造，客观归纳真实业务与工程进展。
+        2. 点明核心攻坚成果、技术突破或业务推进里程碑。
+        3. 给出 2~3 条高度切实可行的下周推进计划建议。
+
+        严格按以下 JSON 格式输出，不要包含多余文字：
+        {
+          "summary": "本周工作核心突破与里程碑综述（160字以内，点明攻坚的核心业务、关键动作与突破成果）",
+          "nextWeekPlans": ["下周规划1", "下周规划2", "下周规划3"]
+        }
+        """
+
+        var promptLines: [String] = []
+        promptLines.append("周周期: \(weekRange)")
+        promptLines.append("本周累计专注: \(totalMinutes) 分钟")
+        promptLines.append("项目投入占比:")
+        for p in projectShares {
+            promptLines.append("- \(p.projectName): \(p.percentage)% (\(p.focusMinutes) 分钟) 工具: \(p.primaryApp)")
+        }
+        promptLines.append("每日工作摘要:")
+        for d in dailySummaries {
+            promptLines.append("- \(d.date) (\(d.dayOfWeek)): \(d.focusMinutes) 分钟 - \(d.highlight)")
+        }
+
+        let userPrompt = promptLines.joined(separator: "\n")
+
+        executeChat(
+            baseURL: settings.aiBaseURL,
+            apiKey: key,
+            model: settings.aiModel,
+            systemPrompt: systemPrompt,
+            userPrompt: userPrompt,
+            maxTokens: 500,
+            timeout: 20.0
+        ) { rawText in
+            if let raw = rawText,
+               let clean = raw.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "").trimmingCharacters(in: .whitespacesAndNewlines).data(using: .utf8),
+               let dict = try? JSONSerialization.jsonObject(with: clean) as? [String: Any],
+               let summary = dict["summary"] as? String {
+                let plans = dict["nextWeekPlans"] as? [String] ?? localWeeklyWrapUp.nextWeekPlans
+                let result = WeeklyWrapUp(
+                    weekRange: weekRange,
+                    summary: summary,
+                    totalFocusMinutes: totalMinutes,
+                    totalSessionCount: totalCount,
+                    projectDistribution: projectShares,
+                    dailyBreakdown: dailySummaries,
+                    nextWeekPlans: plans
+                )
+                completion(result)
+            } else {
+                completion(localWeeklyWrapUp)
+            }
+        }
+    }
+
     // MARK: - 测试连接 (用于设置界面一键连通性校验)
 
     public func testConnection(baseURL: String, apiKey: String, model: String, completion: @escaping @Sendable (Bool, String) -> Void) {

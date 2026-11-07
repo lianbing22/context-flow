@@ -46,6 +46,7 @@ public final class SettingsWindowController: NSObject {
 public struct SettingsView: View {
     @ObservedObject var engine = ContextEngine.shared
     @ObservedObject var lifelog = LifeLogSyncManager.shared
+    @ObservedObject var themeMgr = ThemeManager.shared
 
     // MARK: - AI 配置状态
     @State private var selectedProvider: String = "deepseek"
@@ -56,6 +57,9 @@ public struct SettingsView: View {
     @State private var isTestingConnection: Bool = false
     @State private var testResultText: String? = nil
     @State private var isTestSuccess: Bool = false
+
+    // MARK: - 外观与主题状态
+    @State private var selectedTheme: AppTheme = ThemeManager.shared.currentTheme
 
     // MARK: - GitHub 编年史状态
     @State private var enableGitHubSync: Bool = false
@@ -100,7 +104,13 @@ public struct SettingsView: View {
                         Label("数字编年史", systemImage: "book.closed")
                     }
 
-                // Tab 4: 系统权限与高级
+                // Tab 4: 外观与个性主题
+                appearanceSettingsTab
+                    .tabItem {
+                        Label("外观与主题", systemImage: "paintpalette.fill")
+                    }
+
+                // Tab 5: 系统权限与高级
                 generalSettingsTab
                     .tabItem {
                         Label("权限与高级", systemImage: "gearshape")
@@ -154,6 +164,9 @@ public struct SettingsView: View {
         self.transientThreshold = Double(s.transientThresholdSeconds)
         self.maxSuspended = Double(s.maxDisplaySuspended)
         self.enableThumbnails = s.enableThumbnails
+        if let t = AppTheme(rawValue: s.theme) {
+            self.selectedTheme = t
+        }
     }
 
     private func saveAllSettings() {
@@ -171,10 +184,12 @@ public struct SettingsView: View {
         s.transientThresholdSeconds = Int(transientThreshold)
         s.maxDisplaySuspended = Int(maxSuspended)
         s.enableThumbnails = enableThumbnails
+        s.theme = selectedTheme.rawValue
 
         engine.settings = s
         engine.persistState()
-        AppLogger.shared.log(tag: "SETTINGS", message: "全局配置已保存更新！")
+        themeMgr.applyTheme(selectedTheme)
+        AppLogger.shared.log(tag: "SETTINGS", message: "全局配置与主题 [\(selectedTheme.displayName)] 已保存更新！")
     }
 
     private func resetToDefaults() {
@@ -190,6 +205,8 @@ public struct SettingsView: View {
         self.transientThreshold = Double(def.transientThresholdSeconds)
         self.maxSuspended = Double(def.maxDisplaySuspended)
         self.enableThumbnails = def.enableThumbnails
+        self.selectedTheme = .amber
+        themeMgr.applyTheme(.amber)
     }
 
     private func refreshPermissionsStatus() {
@@ -535,6 +552,65 @@ public struct SettingsView: View {
                             .foregroundColor(.green)
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Tab 5: 外观与个性主题设置
+
+    private var appearanceSettingsTab: some View {
+        Form {
+            Section(header: Text("视觉质感与主题配色").font(.headline)) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("选择适合您工作习惯的主题风格。切换立即生效于主菜单浮窗与全景大工作台。")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+
+                    ForEach(AppTheme.allCases) { theme in
+                        HStack(spacing: 12) {
+                            HStack(spacing: -4) {
+                                ForEach(0..<theme.previewColors.count, id: \.self) { i in
+                                    Circle()
+                                        .fill(theme.previewColors[i])
+                                        .frame(width: 14, height: 14)
+                                        .overlay(Circle().stroke(Color.black.opacity(0.15), lineWidth: 1))
+                                }
+                            }
+                            .frame(width: 32)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(theme.displayName)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Text(theme.subtitle)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            if selectedTheme == theme {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(theme.accentColor)
+                                    .font(.system(size: 14))
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(selectedTheme == theme ? theme.badgeBackground : Color(NSColor.controlBackgroundColor).opacity(0.3))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(selectedTheme == theme ? theme.accentColor.opacity(0.5) : Color.primary.opacity(0.06), lineWidth: 1)
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedTheme = theme
+                            themeMgr.applyTheme(theme)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
             }
         }
     }

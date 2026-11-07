@@ -28,26 +28,59 @@
 
 <table align="center">
   <tr>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
       <strong>⚡️ 状态栏快捷浮窗</strong><br><br>
       <img src="docs/screenshots/01_main_panel.png" alt="状态栏快捷浮窗" width="100%" />
       <br>
-      <em>微缩视窗快照 · 下一步行动胶囊 · 快速语义检索</em>
+      <em>微缩视窗快照 · 下一步行动胶囊 · 分类筛选 Chips</em>
     </td>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
+      <strong>🎨 丰富主题设置系统</strong><br><br>
+      <img src="docs/screenshots/03_settings_themes.png" alt="丰富主题设置系统" width="100%" />
+      <br>
+      <em>5 套专业质感主题 · 即时换肤 · 跟随系统/阶跃暖橘</em>
+    </td>
+    <td align="center" width="25%">
       <strong>⚙️ 开源配置中心 (BYOK)</strong><br><br>
       <img src="docs/screenshots/03_settings_ai.png" alt="开源配置中心" width="100%" />
       <br>
       <em>支持 DeepSeek / 智谱 / OpenAI / 本地 Ollama</em>
     </td>
-    <td align="center" width="33%">
-      <strong>☀️ 每日智能工作复盘</strong><br><br>
+    <td align="center" width="25%">
+      <strong>📅 日报/周报 双模态复盘</strong><br><br>
       <img src="docs/screenshots/04_daily_briefing.png" alt="每日智能工作复盘" width="100%" />
       <br>
-      <em>攻坚业务实体总结 · 专注时长 · 一键复制 Markdown</em>
+      <em>项目投入占比条 · 每日脉络 · 下周规划 · Markdown 导出</em>
     </td>
   </tr>
 </table>
+
+---
+
+## 🌟 核心亮点与对齐功能 (Key Features)
+
+### 1. 🔍 对话搜索与多维上下文过滤 (Context Search & Multi-dimension Filter)
+* **全域关键词秒级直达**：输入项目名、窗口标题、网址或文本，毫秒级检索所有专注现场与挂起足迹；
+* **五大应用分类 Chips**：一键切换【全部】、【💻 开发】、【🌐 浏览器】、【💬 沟通】、【📝 文档】，快速精准锁定当时上下文；
+* **自然语言直接问答**：浮窗内直接提问（如“今天上午改了什么代码？”、“看了哪些平台？”），AI 本地结合记忆即时回答。
+
+### 2. 📅 日报 (Daily) / 周报 (Weekly) 双模态全景工作复盘
+* **☀️ 今日全景日报**：结构化归纳今日攻坚项目、专注分钟数、核心突破与明日跟进清单；
+* **📅 本周工作周报**：跨 7 天聚合统计各项目时间投入，精准计算各项目研发**耗时与占比百分比（附可视化进度条）**；
+* **智能下周规划建议**：根据本周实际攻坚瓶颈与进展，AI 自动生成高可行性的下周推进规划；
+* **一键导出标准 Markdown**：一键复制周报/日报 Markdown，直接粘贴至飞书、语雀、钉钉或周例会邮件汇报。
+
+### 3. 🎨 5 套专业质感主题系统 (Rich Theme Settings)
+* **跟随系统 (System Native)**：智能适配 macOS 原生浅色与深色模式，自然融合；
+* **阶跃暖橘 (StepFun Amber)**：对齐商业级 AI 助手经典灵动暖橙视觉风格；
+* **极光深邃 (Aurora Deep)**：专为夜间与沉浸式编程打造的极光蓝绿暗色系；
+* **电光紫霓 (Electric Neon)**：现代极客科技感霓虹紫渐变；
+* **极简纸墨 (Minimal Paper)**：高对比度、无干扰的黑白极简纸墨风格；
+* **即时全局生效**：在偏好设置卡片中单选预览，主菜单浮窗与全景工作台毫秒级同步换肤。
+
+### 4. 🧠 真实视窗穿透与端侧神经网络 OCR
+* **穿透内核**：嗅探真实标签页标题、业务平台与文件路径；
+* **100% 本地 Vision 神经网络**：离开瞬间由 Apple Neural Engine 离线毫秒级提取大字实体，**0 截图上传云端，完全保护隐私**。
 
 ---
 
@@ -149,14 +182,16 @@ context-flow/
     ├── ContextStore.swift   # 本地数据持久化存储 (~/.contextflow/data.json)
     ├── WindowInspector.swift# 毫秒级窗口与浏览器标签深度穿透器
     ├── SnapshotManager.swift# 本地 Vision 神经网络离线 OCR 与微缩截图生成器
-    ├── AISummarizer.swift   # Anti-Slop 业务实体提炼与自然语言问答引擎
-    ├── ContextEngine.swift  # 场景判定状态机 (打断过滤、挂起、生命周期管理)
+    ├── AISummarizer.swift   # Anti-Slop 业务实体提炼、周报/日报智能总结与对话检索
+    ├── ContextEngine.swift  # 场景判定状态机 (打断过滤、挂起、多维过滤检索)
+    ├── ThemeManager.swift   # 多套专业主题状态管理器 (5套主题动态实时换肤)
+    ├── DashboardView.swift  # 全景独立大工作台 (全景时间轴、挂起看板、分类过滤)
     ├── Restorer.swift       # 一键唤醒与现场还原执行器
     ├── LifeLogSyncManager.swift # GitHub 私有编年史异步自动化同步器
     ├── MenuBarManager.swift # 状态栏 NSStatusItem 与交互管理器
     ├── PermissionsManager.swift # TCC 权限诊断与长效锁定检测
-    ├── Views.swift          # SwiftUI 现代主 Popover 界面与全景复盘弹窗
-    ├── SettingsView.swift   # SwiftUI 全功能 4-Tab 配置中心
+    ├── Views.swift          # SwiftUI 现代主 Popover 界面与全景复盘弹窗 (日报/周报双模态)
+    ├── SettingsView.swift   # SwiftUI 全功能 5-Tab 配置中心 (含外观与主题)
     ├── AppIconManager.swift # 原生应用图标高保真缓存渲染器
     └── Logger.swift         # 本地运行日志记录器 (~/.contextflow/contextflow.log)
 ```

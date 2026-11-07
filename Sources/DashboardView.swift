@@ -51,14 +51,17 @@ public final class DashboardWindowController: NSObject {
 public struct DashboardView: View {
     @ObservedObject var engine = ContextEngine.shared
     @ObservedObject var lifelog = LifeLogSyncManager.shared
+    @ObservedObject var themeMgr = ThemeManager.shared
 
     @State private var selectedTab: String = "timeline" // timeline, suspended, projects
     @State private var searchText: String = ""
+    @State private var selectedCategory: ContextEngine.FilterCategory = .all
     @State private var selectedSessionId: UUID? = nil
 
-    // 弹窗状态
+    // 弹窗状态 (日报/周报 双模态)
     @State private var activeBriefing: DailyWrapUp? = nil
     @State private var showingBriefingSheet: Bool = false
+    @State private var initialReportMode: Int = 0 // 0: 日报, 1: 周报
     @State private var isWrapUpGenerating: Bool = false
 
     public init() {}
@@ -96,9 +99,9 @@ public struct DashboardView: View {
                 }
             }
 
-            // 全景复盘弹窗
+            // 全景复盘弹窗 (双模态: 日报/周报)
             if showingBriefingSheet, let briefing = activeBriefing {
-                DailyBriefingModal(briefing: briefing, onClose: {
+                DailyBriefingModal(briefing: briefing, initialReportMode: initialReportMode, onClose: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showingBriefingSheet = false
                     }
@@ -112,24 +115,19 @@ public struct DashboardView: View {
     // MARK: - Computed Properties
 
     private var allSessions: [ContextSession] {
-        var list: [ContextSession] = []
-        if let act = engine.activeSession {
-            list.append(act)
-        }
-        list.append(contentsOf: engine.suspendedSessions)
-        list.append(contentsOf: engine.completedSessions)
-
-        if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            return list
+        var statusFilter: ContextEngine.FilterStatus = .all
+        if selectedTab == "suspended" {
+            statusFilter = .suspended
+        } else if selectedTab == "completed" {
+            statusFilter = .completed
         }
 
-        let q = searchText.lowercased()
-        return list.filter { s in
-            s.title.lowercased().contains(q) ||
-            s.primaryApp.lowercased().contains(q) ||
-            (s.aiSummary?.lowercased().contains(q) ?? false) ||
-            (s.detectedProject?.lowercased().contains(q) ?? false)
-        }
+        return engine.searchSessions(
+            query: searchText,
+            category: selectedCategory,
+            status: statusFilter,
+            timeRange: .all
+        )
     }
 
     private var currentSelectedSession: ContextSession? {
@@ -152,11 +150,11 @@ public struct DashboardView: View {
             HStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .fill(Color.orange.opacity(0.18))
+                        .fill(themeMgr.currentTheme.accentColor.opacity(0.18))
                         .frame(width: 28, height: 28)
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.orange)
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
@@ -194,7 +192,7 @@ public struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("\(allSessions.count)")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.orange)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
                         Text("攻坚现场")
                             .font(.system(size: 9.5))
                             .foregroundColor(.secondary)
@@ -232,25 +230,43 @@ public struct DashboardView: View {
 
             Spacer()
 
-            // 底部控制
+            // 底部控制：全景工作复盘 (日报 / 周报)
             VStack(spacing: 8) {
-                Button(action: {
-                    triggerWrapUp()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 11))
-                        Text("全景工作复盘")
-                            .font(.system(size: 12, weight: .medium))
-                        Spacer()
+                HStack(spacing: 6) {
+                    Button(action: {
+                        triggerWrapUp(initialMode: 0)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sun.max.fill")
+                                .font(.system(size: 10))
+                            Text("今日日报")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                        .cornerRadius(6)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(Color.orange.opacity(0.12))
-                    .foregroundColor(.orange)
-                    .cornerRadius(7)
+                    .buttonStyle(.plain)
+
+                    Button(action: {
+                        triggerWrapUp(initialMode: 1)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.system(size: 10))
+                            Text("本周周报")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
                 Button(action: {
                     SettingsWindowController.shared.showWindow()
@@ -258,8 +274,8 @@ public struct DashboardView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 11))
-                        Text("偏好设置")
-                            .font(.system(size: 12))
+                        Text("偏好设置 (主题/AI/同步)")
+                            .font(.system(size: 11.5))
                         Spacer()
                     }
                     .foregroundColor(.secondary)
@@ -282,7 +298,7 @@ public struct DashboardView: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 12))
-                    .foregroundColor(selectedTab == id ? .orange : .secondary)
+                    .foregroundColor(selectedTab == id ? themeMgr.currentTheme.accentColor : .secondary)
 
                 Text(title)
                     .font(.system(size: 12, weight: selectedTab == id ? .semibold : .regular))
@@ -295,8 +311,8 @@ public struct DashboardView: View {
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(selectedTab == id ? Color.orange.opacity(0.15) : Color.primary.opacity(0.06))
-                        .foregroundColor(selectedTab == id ? .orange : .secondary)
+                        .background(selectedTab == id ? themeMgr.currentTheme.accentColor.opacity(0.15) : Color.primary.opacity(0.06))
+                        .foregroundColor(selectedTab == id ? themeMgr.currentTheme.accentColor : .secondary)
                         .cornerRadius(6)
                 }
             }
@@ -308,16 +324,16 @@ public struct DashboardView: View {
         .buttonStyle(.plain)
     }
 
-    // 顶部工具栏与搜索
+    // 顶部工具栏与多维搜索
     private var topToolbarView: some View {
         HStack(spacing: 12) {
-            // 全局语义搜索
+            // 全局语义搜索输入框
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeMgr.currentTheme.accentColor)
 
-                TextField("搜索记忆、业务实体、网址或文件...", text: $searchText)
+                TextField("对话搜索记忆、业务实体、网址或文件...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
 
@@ -338,6 +354,27 @@ public struct DashboardView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
+            .frame(minWidth: 260)
+
+            // 多维分类过滤 Chips
+            HStack(spacing: 6) {
+                ForEach(ContextEngine.FilterCategory.allCases) { cat in
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            selectedCategory = cat
+                        }
+                    }) {
+                        Text(cat.rawValue)
+                            .font(.system(size: 10.5, weight: selectedCategory == cat ? .semibold : .regular))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor.opacity(0.16) : Color.primary.opacity(0.05))
+                            .foregroundColor(selectedCategory == cat ? themeMgr.currentTheme.accentColor : .secondary)
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
 
             Spacer()
 
@@ -466,14 +503,14 @@ public struct DashboardView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 9))
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(themeMgr.currentTheme.accentColor)
                                 Text(sug)
                                     .font(.system(size: 11.5, weight: .medium))
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(themeMgr.currentTheme.accentColor)
                             }
                             .padding(8)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.orange.opacity(0.08))
+                            .background(themeMgr.currentTheme.accentColor.opacity(0.08))
                             .cornerRadius(6)
                         }
                     }
@@ -527,7 +564,7 @@ public struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(Color.orange)
+                .background(themeMgr.currentTheme.accentColor)
                 .foregroundColor(.white)
                 .cornerRadius(7)
             }
@@ -537,7 +574,8 @@ public struct DashboardView: View {
         }
     }
 
-    private func triggerWrapUp() {
+    private func triggerWrapUp(initialMode: Int = 0) {
+        self.initialReportMode = initialMode
         isWrapUpGenerating = true
         engine.generateTodayWrapUp { wrapUp in
             Task { @MainActor in
@@ -561,6 +599,7 @@ struct DashboardSessionCard: View {
     let onSelect: () -> Void
     let onRestore: () -> Void
     let onComplete: () -> Void
+    @ObservedObject var themeMgr = ThemeManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -603,18 +642,18 @@ struct DashboardSessionCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 8))
-                            .foregroundColor(.orange)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
                         Text("下一步：\(sug)")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.orange)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
                             .lineLimit(1)
                         Image(systemName: "arrow.right")
                             .font(.system(size: 7))
-                            .foregroundColor(.orange.opacity(0.8))
+                            .foregroundColor(themeMgr.currentTheme.accentColor.opacity(0.8))
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.08))
+                    .background(themeMgr.currentTheme.accentColor.opacity(0.08))
                     .cornerRadius(5)
                 }
                 .buttonStyle(.plain)
@@ -652,7 +691,7 @@ struct DashboardSessionCard: View {
                 }
                 .font(.system(size: 10, weight: .medium))
                 .buttonStyle(.plain)
-                .foregroundColor(.orange)
+                .foregroundColor(themeMgr.currentTheme.accentColor)
             }
             .padding(.top, 2)
         }
@@ -661,7 +700,7 @@ struct DashboardSessionCard: View {
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.orange.opacity(0.6) : Color.primary.opacity(0.08), lineWidth: isSelected ? 1.5 : 0.5)
+                .stroke(isSelected ? themeMgr.currentTheme.accentColor.opacity(0.6) : Color.primary.opacity(0.08), lineWidth: isSelected ? 1.5 : 0.5)
         )
         .contentShape(Rectangle())
         .onTapGesture {

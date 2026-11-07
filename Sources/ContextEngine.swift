@@ -401,6 +401,139 @@ public final class ContextEngine: ObservableObject {
         }
     }
 
+    // MARK: - 周报生成
+
+    /// 触发本周工作全景周报生成 (聚合过去 7 天内的真实活跃现场)
+    public func generateThisWeekWrapUp(completion: (@Sendable (WeeklyWrapUp?) -> Void)? = nil) {
+        let now = Date()
+        let cutoff = now.addingTimeInterval(-7 * 24 * 3600)
+
+        let allCandidates = (activeSession.map { [$0] } ?? []) + suspendedSessions + completedSessions
+
+        let validSessions = allCandidates.filter { s in
+            let isActiveRecently = s.lastActiveAt >= cutoff || s.createdAt >= cutoff
+            let isSignificant = s.totalActiveSeconds >= 15 || s.aiSummary != nil
+            return isActiveRecently && isSignificant
+        }
+
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let weekAgo = calendar.date(byAdding: .day, value: -6, to: now) ?? now
+        let weekRange = "\(dateFormatter.string(from: weekAgo)) ~ \(dateFormatter.string(from: now))"
+
+        AISummarizer.shared.generateWeeklyWrapUp(weekRange: weekRange, sessions: validSessions) { wrapUp in
+            if let wrapUp = wrapUp {
+                AppLogger.shared.log(tag: "WEEKLY_WRAPUP", message: "本周工作周报已生成: [\(wrapUp.summary.prefix(30))...]")
+            }
+            completion?(wrapUp)
+        }
+    }
+
+    // MARK: - 对话与上下文全文检索 (Search)
+
+    public enum FilterCategory: String, CaseIterable, Identifiable {
+        case all = "全部"
+        case dev = "💻 开发"
+        case browser = "🌐 浏览器"
+        case chat = "💬 沟通"
+        case doc = "📝 文档"
+
+        public var id: String { rawValue }
+    }
+
+    public enum FilterStatus: String, CaseIterable, Identifiable {
+        case all = "全部状态"
+        case active = "🟢 专注中"
+        case suspended = "🔴 挂起防遗漏"
+        case completed = "⚪️ 已归档"
+
+        public var id: String { rawValue }
+    }
+
+    public enum FilterTimeRange: String, CaseIterable, Identifiable {
+        case all = "全部时间"
+        case today = "今天"
+        case threeDays = "近3天"
+        case thisWeek = "本周"
+
+        public var id: String { rawValue }
+    }
+
+    /// 对话与上下文多维检索
+    public func searchSessions(
+        query: String,
+        category: FilterCategory = .all,
+        status: FilterStatus = .all,
+        timeRange: FilterTimeRange = .all
+    ) -> [ContextSession] {
+        var pool: [ContextSession] = []
+        if let active = activeSession { pool.append(active) }
+        pool.append(contentsOf: suspendedSessions)
+        pool.append(contentsOf: completedSessions)
+
+        let now = Date()
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return pool.filter { s in
+            // 1. 时间过滤
+            switch timeRange {
+            case .all: break
+            case .today:
+                if now.timeIntervalSince(s.lastActiveAt) > 24 * 3600 { return false }
+            case .threeDays:
+                if now.timeIntervalSince(s.lastActiveAt) > 3 * 24 * 3600 { return false }
+            case .thisWeek:
+                if now.timeIntervalSince(s.lastActiveAt) > 7 * 24 * 3600 { return false }
+            }
+
+            // 2. 状态过滤
+            switch status {
+            case .all: break
+            case .active:
+                if s.id != activeSession?.id { return false }
+            case .suspended:
+                if !suspendedSessions.contains(where: { $0.id == s.id }) { return false }
+            case .completed:
+                if !completedSessions.contains(where: { $0.id == s.id }) { return false }
+            }
+
+            // 3. 应用分类过滤
+            let appLower = s.primaryApp.lowercased()
+            switch category {
+            case .all: break
+            case .dev:
+                let devApps = ["xcode", "code", "terminal", "iterm", "cursor", "sublime", "fleet", "intellij", "pycharm", "android studio"]
+                if !devApps.contains(where: { appLower.contains($0) }) { return false }
+            case .browser:
+                let browserApps = ["safari", "chrome", "edge", "arc", "firefox", "brave", "ego lite"]
+                if !browserApps.contains(where: { appLower.contains($0) }) { return false }
+            case .chat:
+                let chatApps = ["wechat", "微信", "lark", "feishu", "飞书", "dingtalk", "钉钉", "slack", "telegram", "teams"]
+                if !chatApps.contains(where: { appLower.contains($0) }) { return false }
+            case .doc:
+                let docApps = ["notes", "备忘录", "finder", "访达", "pages", "word", "notion", "obsidian", "typora"]
+                if !docApps.contains(where: { appLower.contains($0) }) { return false }
+            }
+
+            // 4. 关键词全文匹配
+            if q.isEmpty { return true }
+
+            let titleMatch = s.title.lowercased().contains(q)
+            let appMatch = s.primaryApp.lowercased().contains(q)
+            let summaryMatch = s.aiSummary?.lowercased().contains(q) ?? false
+            let projectMatch = s.detectedProject?.lowercased().contains(q) ?? false
+            let noteMatch = s.userNote?.lowercased().contains(q) ?? false
+            let itemMatch = s.items.contains { item in
+                item.windowTitle.lowercased().contains(q) ||
+                (item.url?.lowercased().contains(q) ?? false) ||
+                (item.extractedText?.lowercased().contains(q) ?? false)
+            }
+
+            return titleMatch || appMatch || summaryMatch || projectMatch || noteMatch || itemMatch
+        }.sorted { $0.lastActiveAt > $1.lastActiveAt }
+    }
+
     /// 后台异步补偿队列：定期扫描未完成意图解析的会话，实现最终一致性
     private func processPendingSummaryQueue() {
         guard !isProcessingSummaryQueue else { return }
