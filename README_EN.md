@@ -9,32 +9,33 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS%2013.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/Swift-6.0%20%7C%20SwiftUI-orange?style=flat-square&logo=swift" alt="Swift 6.0" />
+  <img src="https://img.shields.io/badge/Architecture-DeepSeek%20Harness%20Plugin-purple?style=flat-square" alt="DeepSeek Harness Plugin" />
   <img src="https://img.shields.io/badge/Database-SQLite3%20WAL%20%2B%20FTS5-blueviolet?style=flat-square" alt="SQLite3 + FTS5" />
-  <img src="https://img.shields.io/badge/Architecture-Apple%20Neural%20Engine-success?style=flat-square" alt="Apple Neural Engine" />
+  <img src="https://img.shields.io/badge/Vision-Apple%20Neural%20Engine-success?style=flat-square" alt="Apple Neural Engine" />
   <img src="https://img.shields.io/badge/Privacy-100%25%20Local%20Storage-brightgreen?style=flat-square" alt="100% Local Storage" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
 </p>
 
 <p align="center">
-  <strong>High-performance, commercial-grade digital memory, window context guardian, and AI-powered work debriefing assistant designed specifically for macOS.</strong><br>
-  Inspired by modern desktop designs like StepFun, powered by an industrial-grade embedded SQLite3 engine with FTS5 inverted full-text search, BYOK (Bring Your Own Key) high-availability key rotation pool, zero screenshot cloud uploads, and 100% offline capability.
+  <strong>High-performance industrial-grade global digital memory, window context guardian, and AI work wrap-up copilot crafted for macOS.</strong><br>
+  Built with StepFun modern desktop aesthetic, fully adopting the <strong>DeepSeek Harness</strong> "Everything is a Plugin" design philosophy. Embedded with an industrial-grade SQLite3 + FTS5 inverted full-text search engine, auto-discovering local models & IDE credentials, high-availability multi-key failover pool, zero cloud image uploads, completely offline-capable and open-source.
 </p>
 
 ---
 
 ## 📸 Interface Gallery
 
-### 🖥️ 1. Full Timeline Panoramic Workspace
-> Spacious, breathable desktop canvas with multi-dimensional categorization chips (All, 💻 Dev, 🌐 Browser, 💬 Chat, 📝 Docs). Top search bar supports instant memory lookup and Enter-to-chat. Right-hand Inspector displays context metadata and one-click window state restoration.
+### 🖥️ 1. Full Timeline Dashboard
+> StepFun-styled panoramic workspace with a 20pt guaranteed safe left-margin that eliminates sidebar truncation. Features multi-dimensional horizontal classification chips (All, 💻 Dev, 🌐 Browser, 💬 Chat, 📝 Docs), flexible search bar with instant Enter-to-chat, and inspector details with one-click window context restoration.
 
 <p align="center">
-  <img src="docs/screenshots/01_dashboard_timeline.png" alt="Panoramic Timeline Workspace" width="95%" />
+  <img src="docs/screenshots/01_dashboard_timeline.png" alt="Full Timeline Dashboard" width="95%" />
 </p>
 
 ---
 
-### 💬 2. Natural Language AI Memory Chat
-> Ask natural language questions against your real macOS working memories (e.g., *"What projects was I working on in Antigravity today and what's the progress?"*). Backed by an anti-hallucination barrier and native SQLite full-text search, ContextFlow provides accurate, structured, and factual debriefings.
+### 💬 2. AI Global Memory Chat
+> Commercial-grade conversational memory search: Ask questions naturally (e.g., *"What projects did I develop in Antigravity today and what is the progress?"*). Backed by genuine SQLite temporal traces and an anti-hallucination barrier, delivering precise and honest answers without fabricated claims.
 
 <p align="center">
   <img src="docs/screenshots/02_dashboard_chat.png" alt="AI Memory Chat" width="95%" />
@@ -42,114 +43,89 @@
 
 ---
 
-### 📅 3. Daily & Weekly Work Debrief Hub
+### ⚙️ 3. Native Preferences & DeepSeek Harness Model Hub
+> Refactored with a clean Segmented navigation pill bar, eradicating popover `>>` collapse and floating toolbar glitches. Auto-discovers local offline models (Ollama, LM Studio), imports IDE configurations (Cursor, Continue, Aider), supports BYOK, multi-key failover pool, privacy blacklists, GitHub LifeLog archive, and multi-language switching (i18n).
 
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <strong>☀️ Today's Daily Wrap-Up</strong><br><br>
-      <img src="docs/screenshots/03_dashboard_daily.png" alt="Today's Daily Wrap-Up" width="100%" />
+      <strong>🔌 DeepSeek Harness Plugin & Authorization Hub</strong><br><br>
+      <img src="docs/screenshots/settings_ai.png" alt="DeepSeek Harness Plugin & Auth Hub" width="100%" />
       <br>
-      <em>Focus metrics · Core achievements · Follow-up plans · Markdown export</em>
+      <em>Local model discovery · IDE authorization import · One-click adoption</em>
     </td>
     <td align="center" width="50%">
-      <strong>📅 Weekly Wrap-Up & Project Breakdown</strong><br><br>
-      <img src="docs/screenshots/04_dashboard_weekly.png" alt="Weekly Wrap-Up" width="100%" />
+      <strong>📚 Digital Chronicle & GitHub Private Archive</strong><br><br>
+      <img src="docs/screenshots/settings_lifelog.png" alt="LifeLog GitOps" width="100%" />
       <br>
-      <em>Visual project time distribution bar · Daily progress timeline · Next week roadmap</em>
+      <em>LifeLog GitOps · Periodic background push · Finder integration</em>
     </td>
   </tr>
 </table>
 
 ---
 
-### ⚙️ 4. Native Preferences & Model Auto-Discovery
-> Rebuilt with a native segmented navigation bar to eliminate overflow and floating menus. Features auto-discovery of local models (Ollama, LM Studio) and developer environments (DeepSeek, OpenAI), multi-key failover pools, and database maintenance.
+## 🌟 Architecture & Key Features
 
-<table align="center">
-  <tr>
-    <td align="center" width="50%">
-      <strong>🔍 Local Model & Environment Auto-Discovery</strong><br><br>
-      <img src="docs/screenshots/settings_model_detector.png" alt="Local Model Auto-Discovery" width="100%" />
-    </td>
-    <td align="center" width="50%">
-      <strong>📚 Digital Chronicle (GitHub Private Backup)</strong><br><br>
-      <img src="docs/screenshots/settings_lifelog.png" alt="Digital Chronicle" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>🛡️ Privacy Protection & App Blacklist</strong><br><br>
-      <img src="docs/screenshots/settings_privacy.png" alt="Privacy & Blacklist" width="100%" />
-    </td>
-    <td align="center" width="50%">
-      <strong>🎨 5 Polished Themes & Multi-Language (i18n)</strong><br><br>
-      <img src="docs/screenshots/settings_appearance.png" alt="Themes and Language" width="100%" />
-    </td>
-  </tr>
-</table>
+### 1. 🔌 DeepSeek Harness Plugin Architecture
+- **Everything is a Plugin**: Follows [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) core philosophy, treating model inference, IDE configurations, and cloud providers as composable plugins.
+- **Local Offline Runtimes**: Concurrently probes Ollama (`11434`), LM Studio (`1234`), vLLM (`8000`), and LocalAI (`8080`), automatically enumerating installed quantized models (e.g., `deepseek-r1:8b`, `qwen2.5-coder:7b`) with zero keys required.
+- **One-Click IDE Configuration Import**:
+  - **Cursor**: Extracts configured OpenAI/Anthropic/Custom API keys and models from `settings.json`.
+  - **Continue**: Safely reads model lists, Base URLs, and keys from `~/.continue/config.json`.
+  - **Aider**: Extracts credentials from `~/.aider.conf.yml` / `~/.env`.
+  - **Claude Desktop / VS Code**: Probes MCP servers and client extensions.
+- **Mainstream Cloud Platforms**: Direct authorization portals and one-click adoption for DeepSeek Official (DeepSeek-V3 & R1 reasoning), Agnes AI, Zhipu GLM, Qwen (DashScope), Moonshot Kimi, StepFun, and OpenAI.
 
----
+### 2. 🗄️ Industrial SQLite3 WAL + FTS5 Full-Text Engine
+- **High-Concurrency WAL Mode**: Built-in macOS native `SQLite3` with Write-Ahead Logging and 8MB cache pages, effortlessly handling microsecond window switches without lockouts.
+- **FTS5 Inverted Index Search**: Virtual FTS5 table powered by `unicode61` tokenizer for sub-millisecond retrieval across tens of thousands of window events.
+- **Normalized Schema**: Structured across `context_sessions`, `timeline_events`, `fts_timeline`, `daily_reports`, and `app_settings`.
 
-## 🌟 Core Highlights & Architectural Advantages
+### 3. 🛡️ Fact-Anchored Anti-Hallucination Shield
+- **Accessibility De-noising**: Filters non-active IDE sidebar tabs (historical chats, project trees) to prevent noise contamination.
+- **Physical Purge & Strict Factuality**: Completely cleansed historic OCR noise records; responses strictly reflect real-time on-screen telemetry.
 
-### 1. 🗄️ Embedded SQLite3 + FTS5 Full-Text Search Engine
-* **High-Concurrency WAL Mode**: Built with native macOS SQLite3 C API, zero third-party database dependencies, featuring Write-Ahead Logging (WAL) and an 8MB memory page cache;
-* **Sub-Millisecond Inverted Search**: FTS5 virtual table with `unicode61` tokenizer indexes window titles, business entity texts, file paths, and summaries for instant retrieval;
-* **ACID Durability**: Real-time write guarantees data consistency at `~/.contextflow/contextflow.sqlite3`.
+### 4. ⚡️ Multi-Key Intelligent Failover Pool
+- Input multiple keys via comma or newline to establish a disaster-recovery pool.
+- Automatically load-balances requests and transparently switches keys upon encountering `429 Too Many Requests` or network timeouts.
 
-### 2. 🔍 Local Model Runtime Auto-Discovery & Harness Mechanism
-* **DeepSeek Harness Inspired**: Automatically probes local ports to discover running models (Ollama on `11434`, LM Studio on `1234`, LocalAI on `8080`, vLLM on `8000`);
-* **Credential Auto-Detection**: Sniffs environment variables and local shell profiles for `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, and `ZHIPU_API_KEY`;
-* **One-Click Adoption**: Instantly adopt discovered endpoints and models without tedious manual configuration.
-
-### 3. ⚡️ High-Availability Multi-Key Failover Pool
-* **BYOK (Bring Your Own Key)**: Full OpenAI API compatibility supporting Agnes AI, DeepSeek, Zhipu GLM, OpenAI, SiliconFlow, and offline Ollama;
-* **Automatic Load Rotation & Failover**: Distributes requests across keys; seamlessly transfers requests to backup keys on `429 Too Many Requests` or timeouts;
-* **Offline Guarantee**: Automatically falls back to on-device Apple Neural Engine when offline or unconfigured.
-
-### 4. 🛡️ Deep Window Penetration & Anti-Hallucination Barrier
-* **Kernel-Level Inspection**: Leverages CoreGraphics and Accessibility APIs to extract real browser tab titles and active IDE file paths;
-* **Sidebar Noise Filtering**: Suppresses noise from navigation sidebars and session histories in IDEs such as Antigravity and Claude;
-* **Factual Boundary Enforcement**: Strict prompt constraints guarantee accurate and grounded AI responses.
+### 5. 🌐 Full Internationalization (i18n)
+- Responsive localization manager (`LocalizationManager.swift`).
+- Supports 🇨🇳 **Simplified Chinese (`zh-Hans`)**, 🇺🇸 **English (`en`)**, and 🇯🇵 **Japanese (`ja`)**.
 
 ---
 
-## 🚀 Quick Start
+## 🛠️ Build & Installation
 
-### 1. Requirements & Build
-Requires macOS 13.0+ and Xcode Command Line Tools (`xcode-select --install`).
+### Requirements
+- macOS 13.0 (Ventura) or later
+- Swift 6.0+ / Xcode 16.0+
 
+### Build from Source
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/lianbing22/context-flow.git
 cd context-flow
 
-# Build and code-sign in one click
-chmod +x build.sh
+# 2. Build with code signing
 ./build.sh
-```
 
-The script builds a code-signed application bundle at `./全局记忆精灵.app`.
-
-### 2. Launch
-```bash
+# 3. Launch application
 open 全局记忆精灵.app
 ```
-* **Accessibility**: Grant Accessibility permissions in **Preferences > Permissions & DB** on first launch to allow real-time window title and text inspection.
-* **Storage Location**: All data and SQLite databases reside locally in `~/.contextflow/`.
 
 ---
 
-## 📖 Practical Scenarios
+## 🔒 Privacy Guarantee
 
-* **Scenario 1: Panoramic Workspace**: Click the lightning bolt icon in the macOS menu bar and expand the panoramic dashboard to view timeline sessions and restore window context with one click.
-* **Scenario 2: Natural Language Memory Recall**: Ask *"What projects was I working on in Antigravity today?"* to get an instant, fact-based response.
-* **Scenario 3: Work Debrief & Weekly Reporting**: Generate structured daily and weekly wrap-ups and copy clean Markdown directly into team chat or issue trackers.
-* **Scenario 4: Auto-Configuring Models**: Open **Preferences > AI Memory Engine**, click **One-Click Auto-Discovery**, and adopt local Ollama or detected DeepSeek keys instantly.
+- **100% Local Storage**: All timelines, entities, and databases are stored in `~/.contextflow/`.
+- **Zero Cloud Uploads**: Thumbnails and OCR are processed on-device via Apple Neural Engine.
+- **Sensitive App Shield**: Password managers (1Password, Keychain) and auth prompts are permanently ignored.
+- **Open Source & Auditable**: Built with 100% pure native Swift and system frameworks.
 
 ---
 
 ## 📄 License
 
-Distributed under the [MIT License](LICENSE). Contributions, bug reports, and pull requests are warmly welcome!
+This project is licensed under the [MIT License](LICENSE).

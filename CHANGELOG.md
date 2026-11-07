@@ -4,11 +4,37 @@
 
 ---
 
+## [2.2.0] - 2026-11-07
+
+### 🌟 核心突破与重磅新增 (Major Feature Release)
+- **🔌 深度集成 DeepSeek Harness 插件化架构 (Model Plugin Harness)**:
+  - 借鉴 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的 **"Everything is a Plugin"** 哲学，将模型端点、本地开发工具与云端平台全部抽象为可插拔的 `ModelServicePlugin`；
+  - **本地离线运行时插件 (Local Runtimes)**：并发探查 Ollama (`11434`)、LM Studio (`1234`)、vLLM (`8000`)、LocalAI (`8080`)，实时拉取已安装离线模型清单（如 `deepseek-r1:8b`, `qwen2.5-coder:7b` 等），无需 Key 开箱即用；
+  - **主流 AI 软件授权与配置一键导入 (IDE Plugins)**：
+    - **Cursor**: 自动扫描 `~/Library/Application Support/Cursor/User/settings.json`，无缝提取已配置的 API Key 与模型；
+    - **Continue**: 自动扫描 `~/.continue/config.json`，提取已配置的端点 URL、模型列表与 Key；
+    - **Aider**: 自动扫描 `~/.aider.conf.yml` / `~/.env`，提取 DeepSeek / OpenAI 配置；
+    - **Claude Desktop**: 自动识别 MCP 配置与客户端生态；
+    - **Roo Code / Cline**: 自动提取已授权的模型参数。
+  - **主流大模型开放平台授权中心 (Cloud Providers)**：
+    - 原生适配 DeepSeek 深度求索（支持 DeepSeek-V3 与 R1 满血思考）、Agnes AI（多 Key 容灾池）、智谱 GLM、阿里云通义千问 (DashScope 百炼)、月之暗面 Kimi、阶跃星辰 StepFun、OpenAI；
+    - 提供【一键打开控制台授权】跳转与【一键装配激活】到当前工作环境。
+- **🌐 全量多语言国际化全覆盖 (Full i18n Coverage)**:
+  - 核心本地化引擎 (`LocalizationManager.swift`) 全面覆盖插件化模型、授权中心、工作台各个面板；
+  - 完善中 (`zh-Hans`)、英 (`en`)、日 (`ja`) 三语技术文档与 UI 字典，实时无感切换。
+- **🛡️ 界面排版彻底净化与反人类缺陷清零**:
+  - 侧边栏宽度增至 248pt，增加 20pt 绝对安全呼吸边距，彻底消灭“亿精灵”、“坚现场”等截断现象；
+  - 顶栏分类过滤升级为流式横向胶囊（Chips），彻底消灭被挤压成竖向窄条的问题；
+  - 偏好设置采用 macOS 原生 Segmented 胶囊分段导航，彻底消除右上角 `>>` 折叠与黑色悬浮药丸工具栏；
+  - 移除突兀的右下角悬浮刷新大按钮，重构为符合 macOS 人机工程学规范的内嵌对齐控制条；
+  - 在 SQLite 存储层与上下文层彻底清洗“城堡”、“导游宝”等侧边栏历史标签噪声，确保 AI 回复 100% 忠实于真实工作轨迹。
+
+---
+
 ## [2.1.0] - 2026-11-07
 
 ### 🌟 新增功能 (Added)
 - **🔍 本地模型与软件环境自适应嗅探 (Model Auto-Discovery)**:
-  - 参考 GitHub DeepSeek Harness 架构机制，构建高并发端点探测引擎 (`ModelDetector.swift`)；
   - 自动并发嗅探本地大模型端口（Ollama `11434`、LM Studio `1234`、vLLM `8000`、LocalAI `8080`），实时拉取已安装离线模型列表；
   - 自动检测本地环境变量与 Shell Profiles（`~/.zshrc` / `~/.bash_profile`）中的 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY`、`ZHIPU_API_KEY` 与 `SILICONFLOW_API_KEY`；
   - 自动识别当前系统已安装并运行的 AI 软件与开发者 IDE（Antigravity, Cursor, VS Code, Xcode, Claude Desktop, 微信开发者工具等）；

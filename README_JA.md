@@ -9,121 +9,120 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS%2013.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/Swift-6.0%20%7C%20SwiftUI-orange?style=flat-square&logo=swift" alt="Swift 6.0" />
+  <img src="https://img.shields.io/badge/Architecture-DeepSeek%20Harness%20Plugin-purple?style=flat-square" alt="DeepSeek Harness Plugin" />
   <img src="https://img.shields.io/badge/Database-SQLite3%20WAL%20%2B%20FTS5-blueviolet?style=flat-square" alt="SQLite3 + FTS5" />
-  <img src="https://img.shields.io/badge/Architecture-Apple%20Neural%20Engine-success?style=flat-square" alt="Apple Neural Engine" />
+  <img src="https://img.shields.io/badge/Vision-Apple%20Neural%20Engine-success?style=flat-square" alt="Apple Neural Engine" />
   <img src="https://img.shields.io/badge/Privacy-100%25%20Local%20Storage-brightgreen?style=flat-square" alt="100% Local Storage" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
 </p>
 
 <p align="center">
-  <strong>macOS 専用の商用グレード・グローバル作業記憶、ウィンドウ現場保護、および AI 日報/週報自動生成アシスタント。</strong><br>
-  StepFun（階躍星辰）デスクトップ風のモダンなUI、macOS組み込み SQLite3 + FTS5 全文検索エンジン、BYOK（APIキー持ち込み）高可用性キーローテーションプール、スクリーンショットのクラウド送信ゼロ、100%完全オフライン動作。
+  <strong>macOS 専用に設計された産業級の全景デジタル記憶・作業現場保護・AI 振り返りコパイロット。</strong><br>
+  StepFun のモダンデスクトップ美学を継承し、<strong>DeepSeek Harness</strong> の「すべてはプラグインである（Everything is a Plugin）」哲学を深く実践。産業級 SQLite3 + FTS5 全文検索エンジンを内蔵し、ローカルモデル・開発環境認証の自動スキャン、複数キーの冗長化自動切り替え、クラウド画像送信ゼロ、完全オフライン対応のオープンソースソリューションです。
 </p>
 
 ---
 
-## 📸 画面ギャラリー (Interface Gallery)
+## 📸 インターフェースギャラリー (Interface Gallery)
 
-### 🖥️ 1. パノラマタイムライン・ワークスペース (Full Timeline Dashboard)
-> 広々としたキャンバスデザイン、多次元カテゴリフィルタ（すべて、💻 開発、🌐 ブラウザ、💬 連絡、📝 文書）。上部検索バーから瞬時に記憶を検索・AIへ質問可能。右側パネルで詳細確認と「当時のウィンドウ現場を復元」をワンクリック実行。
+### 🖥️ 1. 全景タイムライン・ワークスペース (Full Timeline Dashboard)
+> StepFun 調のワイドレイアウト。サイドバーに 20pt の安全マージンを確保し文字切れを根絶。多次元分類タグ（すべて、💻開発、🌐ブラウザ、💬連絡、📝文書）、検索バーからの即時 AI 質問、詳細インスペクターと【当時のウィンドウ現場を復元】を完備。
 
 <p align="center">
-  <img src="docs/screenshots/01_dashboard_timeline.png" alt="パノラマタイムライン" width="95%" />
+  <img src="docs/screenshots/01_dashboard_timeline.png" alt="全景タイムライン" width="95%" />
 </p>
 
 ---
 
-### 💬 2. 自然言語による AI 記憶対話 (Ask Memory Chat)
-> macOS での実際の作業記憶に基づき、自然言語で対話（例：「今日 Antigravity で進めたプロジェクトと進捗は？」）。ローカル SQLite データベースと厳格な幻覚防止バリアにより、客観的かつ正確な業務進捗を回答。
+### 💬 2. AI 記憶対話・検索 (AI Memory Chat)
+> 自然言語で記憶を検索可能（例：「今日 Antigravity で開発したプロジェクトと進捗は？」）。SQLite3 の実データと幻覚防止バリアにより、虚偽のない客観的な業務記録をミリ秒で回答します。
 
 <p align="center">
-  <img src="docs/screenshots/02_dashboard_chat.png" alt="AI 記憶対話" width="95%" />
+  <img src="docs/screenshots/02_dashboard_chat.png" alt="AI記憶対話" width="95%" />
 </p>
 
 ---
 
-### 📅 3. 日報・週報全景ダッシュボード (Daily & Weekly Wrap-up)
+### ⚙️ 3. 環境設定と DeepSeek Harness モデルハブ (Preferences & Plugins)
+> 分割型ナビゲーションにより折りたたみ `>>` や黒い浮動ツールバーを徹底排除。ローカルモデル（Ollama, LM Studio）の自動検出、開発環境（Cursor, Continue, Aider）設定の安全なインポート、BYOK、冗長化キー配列、GitHub 記録同期、多言語切替に対応。
 
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <strong>☀️ 本日の作業日報 (Daily Hub)</strong><br><br>
-      <img src="docs/screenshots/03_dashboard_daily.png" alt="本日の作業日報" width="100%" />
+      <strong>🔌 DeepSeek Harness プラグイン＆認証ハブ</strong><br><br>
+      <img src="docs/screenshots/settings_ai.png" alt="DeepSeek Harness ハブ" width="100%" />
       <br>
-      <em>集中時間指標 · 主要な成果要約 · 明日の計画 · Markdown ワンクリックコピー</em>
+      <em>ローカルモデル検出 · IDE 認証インポート · ワンクリック適用</em>
     </td>
     <td align="center" width="50%">
-      <strong>📅 今週の作業週報と投入分析 (Weekly Hub)</strong><br><br>
-      <img src="docs/screenshots/04_dashboard_weekly.png" alt="今週の作業週報" width="100%" />
-      <br>
-      <em>プロジェクト投入時間割合プログレスバー · 日次進捗履歴 · 来週の重点計画</em>
-    </td>
-  </tr>
-</table>
-
----
-
-### ⚙️ 4. 環境設定とローカルモデル自動検出 (Preferences & Auto-Discovery)
-> ネイティブセグメントナビゲーションを採用し、タブあふれを排除。ローカルモデル（Ollama、LM Studio）や開発環境（DeepSeek、OpenAI）の自動検出、高可用性マルチキーフェイルオーバープールを完備。
-
-<table align="center">
-  <tr>
-    <td align="center" width="50%">
-      <strong>🔍 ローカルモデルと設定の自動検出</strong><br><br>
-      <img src="docs/screenshots/settings_model_detector.png" alt="モデル自動検出" width="100%" />
-    </td>
-    <td align="center" width="50%">
-      <strong>📚 デジタル年代記 (GitHub プライベート同期)</strong><br><br>
+      <strong>📚 デジタル年代記と GitHub プライベート保存</strong><br><br>
       <img src="docs/screenshots/settings_lifelog.png" alt="デジタル年代記" width="100%" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <strong>🛡️ プライバシー保護と除外アプリ設定</strong><br><br>
-      <img src="docs/screenshots/settings_privacy.png" alt="プライバシー保護" width="100%" />
-    </td>
-    <td align="center" width="50%">
-      <strong>🎨 5つのテーマカラーと多言語切り替え (i18n)</strong><br><br>
-      <img src="docs/screenshots/settings_appearance.png" alt="テーマと多言語" width="100%" />
+      <br>
+      <em>LifeLog GitOps · 自動サイレントコミット · Finder 連携</em>
     </td>
   </tr>
 </table>
 
 ---
 
-## 🌟 主な機能と特徴
+## 🌟 主な機能とアーキテクチャ (Key Features)
 
-1. **SQLite3 + FTS5 全文検索エンジン搭載**:
-   - 外部ライブラリ不要で、macOS ネイティブの SQLite3 WAL モードと FTS5 を採用。何万件ものウィンドウタイトルや作業内容をミリ秒単位で高速検索。
-2. **ローカルモデル自動検出 (DeepSeek Harness 機構)**:
-   - 稼働中の Ollama (ポート 11434) や LM Studio (ポート 1234)、環境変数 (`DEEPSEEK_API_KEY`、`OPENAI_API_KEY`) を自動スキャンし、ワンクリックで適用可能。
-3. **マルチキー高可用性ローテーションとフェイルオーバー**:
-   - 複数キーを登録することで負荷分散。レート制限 (429) やタイムアウト発生時に自動で予備キーに切り替え。
-4. **幻覚防止とウィンドウ深層透過**:
-   - IDE 側のサイドバー履歴ノイズを強力にフィルタリングし、実際の開発現場を正確に特定。
+### 1. 🔌 DeepSeek Harness プラグイン型モデル構造
+- **Everything is a Plugin**: [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) の設計哲学に基づき、ローカル推論基盤、IDE設定、クラウドプラットフォームをプラグインとして抽象化。
+- **ローカルオフライン環境の並行検出 (Local Runtimes)**: Ollama (`11434`)、LM Studio (`1234`)、vLLM (`8000`)、LocalAI (`8080`) をスキャンし、インストール済みモデル（`deepseek-r1:8b`, `qwen2.5-coder:7b` 等）を自動取得。
+- **主要開発ツール設定のインポート (IDE Plugins)**:
+  - **Cursor**: 設定ファイルから API キーとモデルを抽出。
+  - **Continue**: `~/.continue/config.json` からエンドポイントとキーを取得。
+  - **Aider**: `~/.aider.conf.yml` / `~/.env` からモデル設定を取得。
+  - **Claude Desktop / VS Code**: MCP サーバとクライアント連携。
+- **主要クラウド LLM 認証ハブ**: DeepSeek（DeepSeek-V3 / R1）、Agnes AI、Zhipu GLM、Qwen (DashScope)、Moonshot Kimi、StepFun、OpenAI の公式認証コンソールへ直接アクセスし、ワンクリックで適用可能。
+
+### 2. 🗄️ 産業級 SQLite3 WAL + FTS5 全文検索エンジン
+- **高並行 WAL モード**: macOS ネイティブの SQLite3 データベースを採用し、ミリ秒単位の頻繁なウィンドウ切り替えでも書き込みロックなし。
+- **FTS5 倒排インデックス**: `unicode61` 分詞器による高速インデックスで、数万件の履歴から瞬時に検索。
+
+### 3. 🛡️ 事実固定とアンチハルシネーション（幻覚防止）
+- **アクセシビリティのノイズ遮断**: IDE サイドバーの過去セッション一覧をフィルタリングし、不要なノイズ混入を防止。
+- **実データとの厳格な整合**: 過去の誤認識データを物理削除し、画面上の実測トレースに基づいた正確な回答を提供。
+
+### 4. ⚡️ 複数キーの冗長化フェイルオーバープール
+- カンマまたは改行で複数キーを登録可能。
+- `429 Too Many Requests` やタイムアウト発生時に予備キーへシームレスに自動切り替え。
+
+### 5. 🌐 完全多言語対応 (i18n)
+- 🇨🇳 **簡体字中国語 (`zh-Hans`)**、🇺🇸 **英語 (`en`)**、🇯🇵 **日本語 (`ja`)** を標準サポート。
 
 ---
 
-## 🚀 クイックスタート
+## 🛠️ ビルドとインストール (Build & Install)
 
-### 1. ビルド
-macOS 13.0 以上および Xcode Command Line Tools が必要です。
+### 必要要件
+- macOS 13.0 (Ventura) 以降
+- Swift 6.0+ / Xcode 16.0+
 
+### ソースコードからのビルド
 ```bash
+# 1. リポジトリのクローン
 git clone https://github.com/lianbing22/context-flow.git
 cd context-flow
-chmod +x build.sh
-./build.sh
-```
 
-### 2. 起動
-```bash
+# 2. ビルドスクリプトの実行 (コード署名付き)
+./build.sh
+
+# 3. アプリケーションの起動
 open 全局记忆精灵.app
 ```
-初回起動時は、【環境設定 - 権限とDB管理】から **アクセシビリティ (Accessibility)** の権限を許可してください。
 
 ---
 
-## 📄 ライセンス
+## 🔒 プライバシー保護 (Privacy First)
+
+- **100% ローカル保存**: すべての記録と SQLite DB は `~/.contextflow/` に安全に保管。
+- **画像クラウド送信ゼロ**: スナップショットと OCR は Apple Neural Engine 上でオフライン完結。
+- **機密アプリの完全除外**: 1Password やシステム Keychain などのパスワード画面は自動ブロック。
+
+---
+
+## 📄 ライセンス (License)
 
 本プロジェクトは [MIT License](LICENSE) のもとで公開されています。

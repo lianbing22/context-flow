@@ -250,18 +250,18 @@ public struct SettingsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    // MARK: - Tab 1: AI 记忆引擎 (BYOK 与多 Key 容灾池 + 自适应本地大模型发现)
+    // MARK: - Tab 1: AI 记忆引擎 (DeepSeek Harness 插件化架构 + 本地模型/软件配置一键装配)
     private var aiTabContent: some View {
         VStack(spacing: 14) {
-            // 卡片 0: 自适应识别本地大模型与软件配置
+            // 卡片 0: DeepSeek Harness 插件化模型与授权中心
             cardContainer(
-                title: "🔍 本地大模型与软件环境自适应嗅探",
-                badge: isScanningLocalModels ? "并发探测中..." : (detectionReport != nil ? "发现 \(detectionReport!.services.count) 端点 / \(detectionReport!.installedApps.count) 软件" : "DeepSeek Harness 机制")
+                title: "🔌 插件化模型与授权中心 (DeepSeek Harness 架构)",
+                badge: isScanningLocalModels ? "并发探测中..." : (detectionReport != nil ? "已就绪 \(detectionReport!.plugins.count) 个适配插件" : "一切皆插件 · 零配置装配")
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("自适应识别本地各种模型和软件，兼容主流模型软件授权与环境变量一键导入。")
+                            Text("借鉴 DeepSeek Harness 插件架构，自适应识别本地离线模型、IDE 软件配置与主流大模型开放平台。")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -274,10 +274,10 @@ public struct SettingsView: View {
                             HStack(spacing: 4) {
                                 if isScanningLocalModels {
                                     ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
-                                    Text("正在嗅探...")
+                                    Text("正在并发探查...")
                                 } else {
                                     Image(systemName: "sparkle.magnifyingglass")
-                                    Text("一键智能探测")
+                                    Text("一键全景探测")
                                 }
                             }
                             .font(.system(size: 11.5, weight: .medium))
@@ -301,49 +301,90 @@ public struct SettingsView: View {
                         .cornerRadius(6)
                     }
 
-                    // 报告回显
+                    // 插件列表回显
                     if let rep = detectionReport {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if !rep.services.isEmpty {
-                                Text("发现的可用大模型服务与凭据：")
-                                    .font(.system(size: 10.5, weight: .bold))
-                                    .foregroundColor(.secondary)
-
-                                ForEach(rep.services) { s in
-                                    HStack(spacing: 8) {
-                                        Image(systemName: s.isLocalOffline ? "desktopcomputer" : "cloud.fill")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(themeMgr.currentTheme.accentColor)
-
-                                        VStack(alignment: .leading, spacing: 1) {
-                                            HStack(spacing: 4) {
-                                                Text(s.name).font(.system(size: 11.5, weight: .semibold))
-                                                Text("(\(s.sourceDescription))")
-                                                    .font(.system(size: 9.5))
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            Text("端点: \(s.baseURL) · 模型: \(s.models.prefix(2).joined(separator: ", "))")
-                                                .font(.system(size: 10, design: .monospaced))
-                                                .foregroundColor(.secondary)
-                                        }
-
-                                        Spacer()
-
-                                        Button("一键装配") {
-                                            adoptDiscoveredService(s)
-                                        }
-                                        .controlSize(.small)
+                        VStack(alignment: .leading, spacing: 10) {
+                            // 1. 本地离线与 IDE 插件列表
+                            ForEach(rep.plugins) { plugin in
+                                HStack(spacing: 8) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(pluginColor(for: plugin.category).opacity(0.15))
+                                            .frame(width: 26, height: 26)
+                                        Image(systemName: pluginIcon(for: plugin.category))
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(pluginColor(for: plugin.category))
                                     }
-                                    .padding(8)
-                                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                                    .cornerRadius(6)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: 6) {
+                                            Text(plugin.name)
+                                                .font(.system(size: 11.5, weight: .bold))
+                                            Text(plugin.authStatus)
+                                                .font(.system(size: 9.5))
+                                                .foregroundColor(plugin.detectedKey != nil ? .green : .secondary)
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.primary.opacity(0.04))
+                                                .cornerRadius(3)
+                                        }
+
+                                        Text("\(plugin.baseURL) · 可用模型: \(plugin.models.prefix(3).joined(separator: ", "))")
+                                            .font(.system(size: 9.5, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    }
+
+                                    Spacer()
+
+                                    // 操作按钮组
+                                    HStack(spacing: 6) {
+                                        if let pUrl = plugin.portalURL, let u = URL(string: pUrl) {
+                                            Button(action: {
+                                                NSWorkspace.shared.open(u)
+                                            }) {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "arrow.up.right.square")
+                                                    Text("授权官网")
+                                                }
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.secondary)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Color.primary.opacity(0.05))
+                                                .cornerRadius(4)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .help("打开该服务商控制台获取或校验 API Key")
+                                        }
+
+                                        Button(action: {
+                                            adoptDiscoveredPlugin(plugin)
+                                        }) {
+                                            HStack(spacing: 3) {
+                                                Image(systemName: "bolt.fill")
+                                                Text("一键装配")
+                                            }
+                                            .font(.system(size: 10.5, weight: .semibold))
+                                            .foregroundColor(themeMgr.currentTheme.accentColor)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3.5)
+                                            .background(themeMgr.currentTheme.accentColor.opacity(0.12))
+                                            .cornerRadius(5)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
+                                .padding(8)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.55))
+                                .cornerRadius(7)
                             }
 
+                            // 2. 本地已识别的开发软件
                             if !rep.installedApps.isEmpty {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("已识别并联动的本地开发与 AI 软件：")
-                                        .font(.system(size: 10.5, weight: .bold))
+                                    Text("已识别联动的开发软件与生态：")
+                                        .font(.system(size: 10, weight: .bold))
                                         .foregroundColor(.secondary)
 
                                     ScrollView(.horizontal, showsIndicators: false) {
@@ -351,7 +392,11 @@ public struct SettingsView: View {
                                             ForEach(rep.installedApps) { app in
                                                 HStack(spacing: 4) {
                                                     Circle().fill(app.isRunning ? Color.green : Color.secondary.opacity(0.4)).frame(width: 5, height: 5)
+                                                    Image(systemName: app.iconName).font(.system(size: 9))
                                                     Text(app.name).font(.system(size: 10.5))
+                                                    if app.hasConfigImportable {
+                                                        Text("可同步").font(.system(size: 8, weight: .bold)).foregroundColor(.blue)
+                                                    }
                                                 }
                                                 .padding(.horizontal, 7)
                                                 .padding(.vertical, 3.5)
@@ -371,7 +416,7 @@ public struct SettingsView: View {
             }
 
             // 卡片 1: 服务商预设
-            cardContainer(title: "服务商预设 (自带密钥 BYOK)", badge: "兼容 OpenAI 标准协议") {
+            cardContainer(title: "服务商快捷预设 (自带密钥 BYOK)", badge: "兼容 OpenAI 标准协议") {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
                         Text("快捷预设：")
@@ -379,11 +424,13 @@ public struct SettingsView: View {
                             .frame(width: 90, alignment: .trailing)
 
                         Picker("", selection: $selectedProvider) {
+                            Text("DeepSeek (官方深度思考 · 推荐)").tag("deepseek")
                             Text("Agnes AI (官方高速 / 智能负载均衡)").tag("agnes")
-                            Text("DeepSeek (官方深度思考)").tag("deepseek")
-                            Text("智谱 GLM-4-Flash (高性价比)").tag("zhipu")
-                            Text("OpenAI (官方 GPT-4o-mini)").tag("openai")
-                            Text("SiliconFlow (硅基流动开源模型)").tag("siliconflow")
+                            Text("智谱 GLM-4-Flash (超高性价比)").tag("zhipu")
+                            Text("通义千问 (DashScope 百炼)").tag("qwen")
+                            Text("月之暗面 Kimi (超长文本)").tag("kimi")
+                            Text("阶跃星辰 StepFun").tag("stepfun")
+                            Text("OpenAI (官方 GPT-4o)").tag("openai")
                             Text("Ollama (本地离线大模型)").tag("ollama")
                             Text("自定义兼容中转 (Custom)").tag("custom")
                         }
@@ -393,7 +440,7 @@ public struct SettingsView: View {
                         }
                     }
 
-                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 Agnes AI、DeepSeek、智谱、通义千问或本地 Ollama。")
+                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 DeepSeek、Agnes、智谱、通义千问、Kimi 或本地 Ollama。")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .padding(.leading, 102)
@@ -407,7 +454,7 @@ public struct SettingsView: View {
                         Text("Base URL：")
                             .font(.system(size: 12, weight: .medium))
                             .frame(width: 90, alignment: .trailing)
-                        TextField("例如 https://api.agnes-ai.cn/v1", text: $aiBaseURL)
+                        TextField("例如 https://api.deepseek.com/v1", text: $aiBaseURL)
                             .textFieldStyle(.roundedBorder)
                     }
 
@@ -415,7 +462,7 @@ public struct SettingsView: View {
                         Text("Model Name：")
                             .font(.system(size: 12, weight: .medium))
                             .frame(width: 90, alignment: .trailing)
-                        TextField("例如 agnes-3.0-flash 或 deepseek-chat", text: $aiModel)
+                        TextField("例如 deepseek-chat 或 agnes-3.0-flash", text: $aiModel)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -528,11 +575,11 @@ public struct SettingsView: View {
         }
     }
 
-    // MARK: - 触发本地模型与软件嗅探
+    // MARK: - 触发 DeepSeek Harness 插件与模型探查
     private func triggerScanLocalModels() {
         isScanningLocalModels = true
         adoptSuccessText = nil
-        ModelDetector.shared.scanAll { report in
+        ModelPluginHarness.shared.scanAll { report in
             Task { @MainActor in
                 self.isScanningLocalModels = false
                 self.detectionReport = report
@@ -540,13 +587,29 @@ public struct SettingsView: View {
         }
     }
 
-    private func adoptDiscoveredService(_ service: DiscoveredModelService) {
-        self.selectedProvider = service.provider
-        self.aiBaseURL = service.baseURL
-        if let first = service.models.first {
+    private func pluginColor(for cat: ModelPluginCategory) -> Color {
+        switch cat {
+        case .localRuntime: return .green
+        case .ideSoftware: return .purple
+        case .cloudProvider: return .blue
+        }
+    }
+
+    private func pluginIcon(for cat: ModelPluginCategory) -> String {
+        switch cat {
+        case .localRuntime: return "desktopcomputer"
+        case .ideSoftware: return "chevron.left.forwardslash.chevron.right"
+        case .cloudProvider: return "cloud.fill"
+        }
+    }
+
+    private func adoptDiscoveredPlugin(_ plugin: ModelServicePlugin) {
+        self.selectedProvider = plugin.provider
+        self.aiBaseURL = plugin.baseURL
+        if let first = plugin.models.first {
             self.aiModel = first
         }
-        if let k = service.detectedKey, !k.isEmpty && k != "ollama" {
+        if let k = plugin.detectedKey, !k.isEmpty && !k.contains("-local") && k != "ollama" {
             if self.aiApiKey.isEmpty {
                 self.aiApiKey = k
             } else if !self.aiApiKey.contains(k) {
@@ -555,8 +618,12 @@ public struct SettingsView: View {
         }
         saveAllSettings()
         withAnimation {
-            adoptSuccessText = "已成功装配 [\(service.name)]，配置已即时生效！"
+            adoptSuccessText = "已成功装配 [\(plugin.name)]，配置已即时生效并写入设置！"
         }
+    }
+
+    private func adoptDiscoveredService(_ service: DiscoveredModelService) {
+        adoptDiscoveredPlugin(service)
     }
 
     // MARK: - Tab 2: 隐私与忽略黑名单
