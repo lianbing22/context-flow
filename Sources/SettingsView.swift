@@ -24,7 +24,7 @@ public final class SettingsWindowController: NSObject {
         let hostingController = NSHostingController(rootView: settingsView)
 
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 490),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 560),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -49,14 +49,16 @@ public struct SettingsView: View {
     @ObservedObject var themeMgr = ThemeManager.shared
 
     // MARK: - AI 配置状态
-    @State private var selectedProvider: String = "deepseek"
-    @State private var aiBaseURL: String = "https://api.deepseek.com/v1"
+    @State private var selectedProvider: String = "agnes"
+    @State private var aiBaseURL: String = "https://api.agnes-ai.cn/v1"
     @State private var aiApiKey: String = ""
-    @State private var aiModel: String = "deepseek-chat"
+    @State private var aiModel: String = "agnes-3.0-flash"
+    @State private var enableKeyRotation: Bool = true
     @State private var showApiKey: Bool = false
     @State private var isTestingConnection: Bool = false
     @State private var testResultText: String? = nil
     @State private var isTestSuccess: Bool = false
+    @State private var keyTestResults: [KeyTestResult] = []
 
     // MARK: - 外观与主题状态
     @State private var selectedTheme: AppTheme = ThemeManager.shared.currentTheme
@@ -82,6 +84,20 @@ public struct SettingsView: View {
     @State private var isSCGranted: Bool = PermissionsManager.shared.isScreenCaptureGranted()
 
     public init() {}
+
+    private var parsedKeys: [String] {
+        let raw = aiApiKey
+        var res: [String] = []
+        for line in raw.components(separatedBy: .newlines) {
+            for part in line.components(separatedBy: ",") {
+                let trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty && !res.contains(trimmed) {
+                    res.append(trimmed)
+                }
+            }
+        }
+        return res
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -142,7 +158,7 @@ public struct SettingsView: View {
             .padding(.vertical, 12)
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 540, height: 490)
+        .frame(width: 600, height: 560)
         .onAppear {
             loadCurrentSettings()
             refreshPermissionsStatus()
@@ -155,6 +171,7 @@ public struct SettingsView: View {
         self.aiBaseURL = s.aiBaseURL
         self.aiApiKey = s.aiApiKey
         self.aiModel = s.aiModel
+        self.enableKeyRotation = s.enableKeyRotation
 
         self.enableGitHubSync = s.enableGitHubSync
         self.gitHubRepo = s.gitHubRepo
@@ -167,6 +184,10 @@ public struct SettingsView: View {
         if let t = AppTheme(rawValue: s.theme) {
             self.selectedTheme = t
         }
+
+        if !self.parsedKeys.isEmpty && self.testResultText == nil {
+            self.testAIConnection()
+        }
     }
 
     private func saveAllSettings() {
@@ -175,6 +196,7 @@ public struct SettingsView: View {
         s.aiBaseURL = aiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         s.aiApiKey = aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         s.aiModel = aiModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        s.enableKeyRotation = enableKeyRotation
 
         s.enableGitHubSync = enableGitHubSync
         s.gitHubRepo = gitHubRepo.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -198,6 +220,7 @@ public struct SettingsView: View {
         self.aiBaseURL = def.aiBaseURL
         self.aiApiKey = ""
         self.aiModel = def.aiModel
+        self.enableKeyRotation = def.enableKeyRotation
         self.enableGitHubSync = def.enableGitHubSync
         self.gitHubRepo = ""
         self.syncIntervalHours = def.syncIntervalHours
@@ -216,92 +239,261 @@ public struct SettingsView: View {
 
     // MARK: - Tab 1: AI 记忆引擎 (BYOK)
 
+    // MARK: - Tab 1: AI 记忆引擎 (BYOK 与多 Key 轮换池)
+
     private var aiSettingsTab: some View {
-        Form {
-            Section(header: Text("服务提供商预设 (自带密钥 BYOK)").font(.headline)) {
-                Picker("快捷预设：", selection: $selectedProvider) {
-                    Text("Agnes AI (官方高速)").tag("agnes")
-                    Text("DeepSeek (官方)").tag("deepseek")
-                    Text("智谱 GLM-4-Flash").tag("zhipu")
-                    Text("OpenAI (官方)").tag("openai")
-                    Text("SiliconFlow (硅基流动)").tag("siliconflow")
-                    Text("Ollama (本地离线)").tag("ollama")
-                    Text("自定义兼容中转 (Custom)").tag("custom")
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 14) {
+                // 卡片 1: 服务商预设与基础协议
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("服务商预设 (自带密钥 BYOK)")
+                            .font(.system(size: 12.5, weight: .bold))
+                        Spacer()
+                        Text("兼容 OpenAI 标准协议")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Picker("快捷预设：", selection: $selectedProvider) {
+                        Text("Agnes AI (官方高速 / 智能负载均衡)").tag("agnes")
+                        Text("DeepSeek (官方深度思考)").tag("deepseek")
+                        Text("智谱 GLM-4-Flash (超高性价比)").tag("zhipu")
+                        Text("OpenAI (官方 GPT-4o-mini)").tag("openai")
+                        Text("SiliconFlow (硅基流动开源模型)").tag("siliconflow")
+                        Text("Ollama (本地离线大模型)").tag("ollama")
+                        Text("自定义兼容中转 (Custom)").tag("custom")
+                    }
+                    .labelsHidden()
+                    .onChange(of: selectedProvider) { _, provider in
+                        applyProviderPreset(provider)
+                    }
+
+                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 Agnes AI、DeepSeek、智谱、通义千问或本地 Ollama。")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.secondary)
+                        .lineSpacing(2)
                 }
-                .onChange(of: selectedProvider) { _, provider in
-                    applyProviderPreset(provider)
-                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+                .cornerRadius(8)
 
-                Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 Agnes AI、DeepSeek、智谱、通义千问或本地大模型。")
-                    .font(.system(size: 10.5))
-                    .foregroundColor(.secondary)
-            }
+                // 卡片 2: API 连接参数
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("API 连接参数")
+                        .font(.system(size: 12.5, weight: .bold))
 
-            Section(header: Text("API 连接参数").font(.headline)) {
-                TextField("Base URL:", text: $aiBaseURL)
-                    .textFieldStyle(.roundedBorder)
-
-                HStack {
-                    if showApiKey {
-                        TextField("API Key:", text: $aiApiKey)
-                            .textFieldStyle(.roundedBorder)
-                    } else {
-                        SecureField("API Key:", text: $aiApiKey)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Base URL (API 端点)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        TextField("例如 https://api.agnes-ai.cn/v1", text: $aiBaseURL)
                             .textFieldStyle(.roundedBorder)
                     }
 
-                    Button(action: {
-                        showApiKey.toggle()
-                    }) {
-                        Image(systemName: showApiKey ? "eye.slash" : "eye")
-                            .font(.system(size: 12))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Model Name (模型代号)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        TextField("例如 agnes-3.0-flash 或 deepseek-chat", text: $aiModel)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .buttonStyle(.plain)
-                    .help(showApiKey ? "隐藏密钥" : "显示明文")
                 }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+                .cornerRadius(8)
 
-                TextField("Model Name:", text: $aiModel)
-                    .textFieldStyle(.roundedBorder)
+                // 卡片 3: 多 Key 智能轮换与故障转移池 (Key Pool)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("高可用 API Key 密钥池 (Key Pool)")
+                            .font(.system(size: 12.5, weight: .bold))
 
-                HStack {
-                    Button(action: {
-                        testAIConnection()
-                    }) {
-                        HStack(spacing: 4) {
-                            if isTestingConnection {
-                                ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
-                            } else {
-                                Image(systemName: "antenna.radiowaves.left.and.right")
+                        Spacer()
+
+                        if parsedKeys.count > 1 {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.green).frame(width: 6, height: 6)
+                                Text("智能轮换已激活 (\(parsedKeys.count) 密钥)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.green)
                             }
-                            Text("测试连通性")
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.green.opacity(0.12))
+                            .cornerRadius(10)
+                        } else if parsedKeys.count == 1 {
+                            Text("单密钥通道就绪")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("未配置密钥 · 离线模式")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange)
                         }
                     }
-                    .disabled(isTestingConnection)
-                    .controlSize(.small)
 
-                    if let result = testResultText {
-                        Text(result)
-                            .font(.system(size: 11))
-                            .foregroundColor(isTestSuccess ? .green : .red)
-                            .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("API 密钥 (支持一行一个或逗号分隔录入多个 Key)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button(action: {
+                                showApiKey.toggle()
+                            }) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: showApiKey ? "eye.slash" : "eye")
+                                    Text(showApiKey ? "密文隐藏" : "明文查看")
+                                }
+                                .font(.system(size: 10.5))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundColor(.accentColor)
+                        }
+
+                        if showApiKey {
+                            TextEditor(text: $aiApiKey)
+                                .font(.system(size: 11, design: .monospaced))
+                                .frame(height: 58)
+                                .padding(4)
+                                .background(Color(NSColor.textBackgroundColor))
+                                .cornerRadius(6)
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
+                        } else {
+                            // 密文状态下用多行 SecureField 或带掩码的单行显示
+                            SecureField("粘贴您的 API Key，支持多行录入多个 Key 组建容灾池", text: $aiApiKey)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                    }
+
+                    // 智能轮换开关
+                    Toggle(isOn: $enableKeyRotation) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("多 Key 负载均衡与超时自动故障转移 (Failover)")
+                                .font(.system(size: 11.5, weight: .semibold))
+                            Text("高频意图提炼与问答时按顺序轮换负载；遇到 429 限流或网络超时无缝转移至备用 Key。")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .padding(.vertical, 2)
+
+                    // 密钥池已解析状态回显
+                    if !parsedKeys.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("已解析密钥通道 (\(parsedKeys.count) 个)：")
+                                .font(.system(size: 10.5, weight: .bold))
+                                .foregroundColor(.secondary)
+
+                            ForEach(Array(parsedKeys.enumerated()), id: \.offset) { idx, k in
+                                HStack {
+                                    Image(systemName: "key.fill")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                                    Text("通道 \(idx + 1): \(AISummarizer.maskKey(k))")
+                                        .font(.system(size: 10.5, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(idx == 0 ? "主力负载" : "热备/轮换")
+                                        .font(.system(size: 9.5))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(NSColor.windowBackgroundColor).opacity(0.7))
+                                .cornerRadius(4)
+                            }
+                        }
+                    }
+
+                    Divider().opacity(0.4)
+
+                    // 连通性测试区
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Button(action: {
+                                testAIConnection()
+                            }) {
+                                HStack(spacing: 5) {
+                                    if isTestingConnection {
+                                        ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
+                                    } else {
+                                        Image(systemName: "antenna.radiowaves.left.and.right")
+                                    }
+                                    Text(parsedKeys.count > 1 ? "一键测试全部密钥池连通性" : "测试连通性")
+                                }
+                            }
+                            .disabled(isTestingConnection || parsedKeys.isEmpty)
+                            .controlSize(.small)
+
+                            if let result = testResultText {
+                                Text(result)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(isTestSuccess ? .green : .red)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        // 多 Key 测试详情独立展示
+                        if !keyTestResults.isEmpty {
+                            VStack(alignment: .leading, spacing: 3) {
+                                ForEach(keyTestResults) { item in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: item.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                            .foregroundColor(item.isSuccess ? .green : .red)
+                                            .font(.system(size: 10))
+                                        Text("\(item.maskedKey):")
+                                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        Text(item.message)
+                                            .font(.system(size: 10))
+                                            .foregroundColor(item.isSuccess ? .primary : .red)
+                                    }
+                                }
+                            }
+                            .padding(6)
+                            .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+                            .cornerRadius(6)
+                        }
                     }
                 }
-                .padding(.top, 2)
-            }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+                .cornerRadius(8)
 
-            Section(header: Text("开箱即用保障").font(.headline)) {
-                Text("💡 若暂不填写 API Key，全局记忆精灵将自动启用 Apple Neural Engine 本地视觉与实体离线引擎，完全断网可用。")
-                    .font(.system(size: 10.5))
-                    .foregroundColor(.secondary)
-                    .lineSpacing(2)
+                // 卡片 4: 离线兜底保障
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 14))
+                        .foregroundColor(.blue)
+                        .padding(.top, 1)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("端侧离线神经引擎保障")
+                            .font(.system(size: 11.5, weight: .bold))
+                        Text("若未配置 API Key 或网络中断，系统会自动调用 Apple Neural Engine 本地视觉与实体离线引擎，毫秒级提取窗口意图，完全离线可用且 0 报错。")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.blue.opacity(0.08))
+                .cornerRadius(8)
             }
+            .padding(1)
         }
     }
 
     private func applyProviderPreset(_ provider: String) {
         switch provider {
         case "agnes":
-            aiBaseURL = "https://apihub.agnes-ai.com/v1"
+            aiBaseURL = "https://api.agnes-ai.cn/v1"
             aiModel = "agnes-3.0-flash"
         case "deepseek":
             aiBaseURL = "https://api.deepseek.com/v1"
@@ -325,17 +517,32 @@ public struct SettingsView: View {
     }
 
     private func testAIConnection() {
+        let keys = parsedKeys
+        guard !keys.isEmpty else {
+            testResultText = "请至少输入一个 API Key"
+            isTestSuccess = false
+            return
+        }
+
         isTestingConnection = true
         testResultText = nil
+        keyTestResults = []
+
         let base = aiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let model = aiModel.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        AISummarizer.shared.testConnection(baseURL: base, apiKey: key, model: model) { success, msg in
+        AISummarizer.shared.testAllConnections(baseURL: base, apiKeys: keys, model: model) { results in
             DispatchQueue.main.async {
                 self.isTestingConnection = false
-                self.isTestSuccess = success
-                self.testResultText = msg
+                self.keyTestResults = results
+                let allSuccess = !results.isEmpty && results.allSatisfy { $0.isSuccess }
+                self.isTestSuccess = allSuccess
+                if allSuccess {
+                    self.testResultText = "✓ 密钥池全部验证通过 (共 \(results.count) 个通道可用)"
+                } else {
+                    let failedCount = results.filter { !$0.isSuccess }.count
+                    self.testResultText = "⚠️ 有 \(failedCount) 个通道连接失败，请查看详情"
+                }
             }
         }
     }

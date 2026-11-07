@@ -5,18 +5,47 @@ public struct SummaryResult: Sendable {
     public let suggestion: String?
 }
 
+public struct KeyTestResult: Identifiable, Sendable {
+    public var id: String { key }
+    public let key: String
+    public let maskedKey: String
+    public let isSuccess: Bool
+    public let latencyMs: Int
+    public let message: String
+
+    public init(key: String, maskedKey: String, isSuccess: Bool, latencyMs: Int, message: String) {
+        self.key = key
+        self.maskedKey = maskedKey
+        self.isSuccess = isSuccess
+        self.latencyMs = latencyMs
+        self.message = message
+    }
+}
+
 public final class AISummarizer: @unchecked Sendable {
     public static let shared = AISummarizer()
 
+    // MARK: - 多 Key 负载均衡与自动故障转移机制 (Failover Key Pool)
+    private let rotationLock = NSLock()
+    private var rotationIndex: Int = 0
+
     private init() {}
+
+    public static func maskKey(_ key: String) -> String {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 10 else { return trimmed }
+        let prefix = trimmed.prefix(6)
+        let suffix = trimmed.suffix(4)
+        return "\(prefix)...\(suffix)"
+    }
 
     /// 极速业务实体意图与下一步行动指引提炼 (优先使用用户配置的 AI 模型，未配置时无缝离线兜底)
     public func summarize(session: ContextSession, completion: @escaping @Sendable (SummaryResult?) -> Void) {
         let settings = ContextStore.shared.load().settings
+        let keys = settings.apiKeys
 
         // 如果用户未配置 API Key，直接由本地 Vision 与实体引擎毫秒级离线提炼，0 报错、0 门槛开箱即用
-        let key = settings.aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if key.isEmpty && settings.aiProvider != "ollama" {
+        if keys.isEmpty && settings.aiProvider != "ollama" {
             let localFallback = generateLocalEntityFallback(session: session)
             AppLogger.shared.log(tag: "AI_OFFLINE", message: "未配置云端 API Key，已由本地神经实体引擎提炼: [\(localFallback.summary)]")
             completion(localFallback)
@@ -66,9 +95,10 @@ public final class AISummarizer: @unchecked Sendable {
 
         let userPrompt = "当前工作现场捕获信息：\n" + contextLines.joined(separator: "\n")
 
-        executeChat(
+        executeChatWithFailover(
             baseURL: settings.aiBaseURL,
-            apiKey: key,
+            apiKeys: keys,
+            enableRotation: settings.enableKeyRotation,
             model: settings.aiModel,
             systemPrompt: systemPrompt,
             userPrompt: userPrompt,
@@ -172,7 +202,7 @@ public final class AISummarizer: @unchecked Sendable {
     /// 全局记忆问答
     public func askMemory(question: String, recentSessions: [ContextSession], completion: @escaping @Sendable (String) -> Void) {
         let settings = ContextStore.shared.load().settings
-        let key = settings.aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keys = settings.apiKeys
 
         var memoryLines: [String] = []
         let dateFormatter = DateFormatter()
@@ -193,9 +223,9 @@ public final class AISummarizer: @unchecked Sendable {
             memoryLines.append("\(i+1). [\(timeStr)] 应用:\(s.primaryApp)\(proj) - 业务现场: \(intent) (耗时\(mins)分钟)")
         }
 
-        if key.isEmpty && settings.aiProvider != "ollama" {
+        if keys.isEmpty && settings.aiProvider != "ollama" {
             let count = filtered.count
-            completion("今天记录了 \(count) 个关键业务现场（包括 \(filtered.prefix(3).map { $0.title }.joined(separator: "、")) 等）。可在设置中配置 DeepSeek / 智谱等 API Key 解锁深度自然语言问答。")
+            completion("今天记录了 \(count) 个关键业务现场（包括 \(filtered.prefix(3).map { $0.title }.joined(separator: "、")) 等）。可在设置中配置 Agnes AI / DeepSeek / 智谱等 API Key 解锁深度自然语言问答。")
             return
         }
 
@@ -210,9 +240,10 @@ public final class AISummarizer: @unchecked Sendable {
 
         let userPrompt = "用户提问：\(question)\n\n今天的工作足迹历史：\n" + memoryLines.joined(separator: "\n")
 
-        executeChat(
+        executeChatWithFailover(
             baseURL: settings.aiBaseURL,
-            apiKey: key,
+            apiKeys: keys,
+            enableRotation: settings.enableKeyRotation,
             model: settings.aiModel,
             systemPrompt: systemPrompt,
             userPrompt: userPrompt,
@@ -235,7 +266,7 @@ public final class AISummarizer: @unchecked Sendable {
         }
 
         let settings = ContextStore.shared.load().settings
-        let key = settings.aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keys = settings.apiKeys
 
         let totalSeconds = sessions.reduce(0) { $0 + $1.totalActiveSeconds }
         let totalMinutes = max(1, totalSeconds / 60)
@@ -253,7 +284,7 @@ public final class AISummarizer: @unchecked Sendable {
         let projectsList = Array(projectsSet)
         let sessionCount = sessions.count
 
-        if key.isEmpty && settings.aiProvider != "ollama" {
+        if keys.isEmpty && settings.aiProvider != "ollama" {
             // 本地无 Key 时自动离线生成优质复盘
             let topTasks = sessions.prefix(3).map { $0.title }.joined(separator: "、")
             let localSummary = "今日累计在电脑前专注 \(totalMinutes) 分钟，重点推进了 \(topTasks) 等 \(sessionCount) 项核心业务现场。各模块均保持稳步推进。"
@@ -288,9 +319,10 @@ public final class AISummarizer: @unchecked Sendable {
 
         let userPrompt = "日期: \(date)\n累计专注时长: \(totalMinutes) 分钟\n工作记录：\n" + lines.joined(separator: "\n")
 
-        executeChat(
+        executeChatWithFailover(
             baseURL: settings.aiBaseURL,
-            apiKey: key,
+            apiKeys: keys,
+            enableRotation: settings.enableKeyRotation,
             model: settings.aiModel,
             systemPrompt: systemPrompt,
             userPrompt: userPrompt,
@@ -345,7 +377,7 @@ public final class AISummarizer: @unchecked Sendable {
         }
 
         let settings = ContextStore.shared.load().settings
-        let key = settings.aiApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keys = settings.apiKeys
 
         let totalSeconds = sessions.reduce(0) { $0 + $1.totalActiveSeconds }
         let totalMinutes = max(1, totalSeconds / 60)
@@ -411,7 +443,7 @@ public final class AISummarizer: @unchecked Sendable {
             ]
         )
 
-        if key.isEmpty && settings.aiProvider != "ollama" {
+        if keys.isEmpty && settings.aiProvider != "ollama" {
             completion(localWeeklyWrapUp)
             return
         }
@@ -447,9 +479,10 @@ public final class AISummarizer: @unchecked Sendable {
 
         let userPrompt = promptLines.joined(separator: "\n")
 
-        executeChat(
+        executeChatWithFailover(
             baseURL: settings.aiBaseURL,
-            apiKey: key,
+            apiKeys: keys,
+            enableRotation: settings.enableKeyRotation,
             model: settings.aiModel,
             systemPrompt: systemPrompt,
             userPrompt: userPrompt,
@@ -477,7 +510,105 @@ public final class AISummarizer: @unchecked Sendable {
         }
     }
 
-    // MARK: - 测试连接 (用于设置界面一键连通性校验)
+    // MARK: - 多 Key 轮换与自动故障转移 (Failover) 执行引擎
+
+    public func executeChatWithFailover(
+        baseURL: String,
+        apiKeys: [String],
+        enableRotation: Bool,
+        model: String,
+        systemPrompt: String,
+        userPrompt: String,
+        maxTokens: Int,
+        timeout: TimeInterval,
+        completion: @escaping @Sendable (String?) -> Void
+    ) {
+        guard !apiKeys.isEmpty else {
+            completion(nil)
+            return
+        }
+
+        let orderedKeys: [String]
+        if enableRotation && apiKeys.count > 1 {
+            rotationLock.lock()
+            let startIndex = rotationIndex % apiKeys.count
+            rotationIndex = (rotationIndex + 1) % apiKeys.count
+            rotationLock.unlock()
+
+            // 围绕当前轮换游标重新排列尝试次序
+            orderedKeys = Array(apiKeys[startIndex..<apiKeys.count]) + Array(apiKeys[0..<startIndex])
+        } else {
+            orderedKeys = apiKeys
+        }
+
+        let runner = FailoverRunner(
+            summarizer: self,
+            baseURL: baseURL,
+            orderedKeys: orderedKeys,
+            model: model,
+            systemPrompt: systemPrompt,
+            userPrompt: userPrompt,
+            maxTokens: maxTokens,
+            timeout: timeout,
+            completion: completion
+        )
+        runner.attempt(at: 0)
+    }
+
+    // MARK: - 多 Key 连通性批量测试 (用于设置界面一键连通性校验)
+
+    public func testAllConnections(
+        baseURL: String,
+        apiKeys: [String],
+        model: String,
+        completion: @escaping @Sendable ([KeyTestResult]) -> Void
+    ) {
+        guard !apiKeys.isEmpty else {
+            completion([])
+            return
+        }
+
+        let group = DispatchGroup()
+        let collector = KeyTestCollector()
+
+        for key in apiKeys {
+            group.enter()
+            let masked = AISummarizer.maskKey(key)
+            let start = Date()
+
+            executeChat(
+                baseURL: baseURL,
+                apiKey: key,
+                model: model,
+                systemPrompt: "You are a ping bot. Reply 'PONG'.",
+                userPrompt: "PING",
+                maxTokens: 10,
+                timeout: 8.0
+            ) { reply in
+                let duration = Int(Date().timeIntervalSince(start) * 1000)
+                let success = (reply != nil && !reply!.isEmpty)
+                let msg = success ? "响应正常 (\(duration)ms)" : "连接超时或授权失败"
+                
+                let res = KeyTestResult(
+                    key: key,
+                    maskedKey: masked,
+                    isSuccess: success,
+                    latencyMs: duration,
+                    message: msg
+                )
+
+                collector.append(res)
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            let results = collector.snapshot()
+            let keyMap = Dictionary(uniqueKeysWithValues: apiKeys.enumerated().map { ($0.element, $0.offset) })
+            let sorted = results.sorted { (keyMap[$0.key] ?? 0) < (keyMap[$1.key] ?? 0) }
+            completion(sorted)
+        }
+    }
 
     public func testConnection(baseURL: String, apiKey: String, model: String, completion: @escaping @Sendable (Bool, String) -> Void) {
         let start = Date()
@@ -501,7 +632,7 @@ public final class AISummarizer: @unchecked Sendable {
 
     // MARK: - 底层通用通信逻辑 (标准 OpenAI 兼容协议)
 
-    private func executeChat(
+    func executeChat(
         baseURL: String,
         apiKey: String,
         model: String,
@@ -586,5 +717,92 @@ public final class AISummarizer: @unchecked Sendable {
             }
         }
         task.resume()
+    }
+}
+
+// MARK: - 辅助并发与故障转移执行器
+
+final class FailoverRunner: @unchecked Sendable {
+    let summarizer: AISummarizer
+    let baseURL: String
+    let orderedKeys: [String]
+    let model: String
+    let systemPrompt: String
+    let userPrompt: String
+    let maxTokens: Int
+    let timeout: TimeInterval
+    let completion: @Sendable (String?) -> Void
+
+    init(
+        summarizer: AISummarizer,
+        baseURL: String,
+        orderedKeys: [String],
+        model: String,
+        systemPrompt: String,
+        userPrompt: String,
+        maxTokens: Int,
+        timeout: TimeInterval,
+        completion: @escaping @Sendable (String?) -> Void
+    ) {
+        self.summarizer = summarizer
+        self.baseURL = baseURL
+        self.orderedKeys = orderedKeys
+        self.model = model
+        self.systemPrompt = systemPrompt
+        self.userPrompt = userPrompt
+        self.maxTokens = maxTokens
+        self.timeout = timeout
+        self.completion = completion
+    }
+
+    func attempt(at index: Int) {
+        guard index < orderedKeys.count else {
+            AppLogger.shared.log(tag: "FAILOVER", message: "❌ 密钥池全部 \(orderedKeys.count) 个 Key 均失败，进入离线神经引擎。")
+            completion(nil)
+            return
+        }
+
+        let currentKey = orderedKeys[index]
+        let masked = AISummarizer.maskKey(currentKey)
+        if index > 0 {
+            AppLogger.shared.log(tag: "FAILOVER", message: "🔄 正在自动故障转移至备用 Key [\(masked)] (重试 \(index + 1)/\(orderedKeys.count))")
+        }
+
+        summarizer.executeChat(
+            baseURL: baseURL,
+            apiKey: currentKey,
+            model: model,
+            systemPrompt: systemPrompt,
+            userPrompt: userPrompt,
+            maxTokens: maxTokens,
+            timeout: timeout
+        ) { [self] result in
+            if let valid = result, !valid.isEmpty {
+                if index > 0 {
+                    AppLogger.shared.log(tag: "FAILOVER", message: "✨ 备用 Key [\(masked)] 故障转移成功！")
+                }
+                self.completion(valid)
+            } else {
+                AppLogger.shared.log(tag: "FAILOVER", message: "⚠️ 密钥 [\(masked)] 异常，正在转移至下一通道...")
+                self.attempt(at: index + 1)
+            }
+        }
+    }
+}
+
+final class KeyTestCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var results: [KeyTestResult] = []
+
+    func append(_ result: KeyTestResult) {
+        lock.lock()
+        results.append(result)
+        lock.unlock()
+    }
+
+    func snapshot() -> [KeyTestResult] {
+        lock.lock()
+        defer { lock.unlock() }
+        return results
     }
 }

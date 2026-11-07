@@ -2,10 +2,19 @@ import Foundation
 
 public struct AppSettings: Codable, Sendable {
     // MARK: - 1. AI 意图与复盘引擎 (开源 BYOK)
-    public var aiProvider: String          // deepseek, zhipu, openai, siliconflow, ollama, custom
+    public var aiProvider: String          // agnes, deepseek, zhipu, openai, siliconflow, ollama, custom
     public var aiBaseURL: String           // API 端点
-    public var aiApiKey: String            // 用户填写的 API Key
+    public var aiApiKey: String            // 用户填写的 API Key (支持多行/换行/逗号分隔的密钥池)
     public var aiModel: String             // 模型名称
+    public var enableKeyRotation: Bool     // 是否开启多 Key 智能轮换与故障转移 (默认 true)
+
+    /// 解析出所有可用的独立 API Key 列表
+    public var apiKeys: [String] {
+        aiApiKey
+            .components(separatedBy: CharacterSet.newlines.union(CharacterSet(charactersIn: ",")))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
 
     // MARK: - 2. 数字编年史与备份
     public var enableGitHubSync: Bool      // 是否开启 GitHub 私有归档同步
@@ -25,10 +34,11 @@ public struct AppSettings: Codable, Sendable {
     public var theme: String               // system, amber, aurora, neon, paper
 
     public init(
-        aiProvider: String = "deepseek",
-        aiBaseURL: String = "https://api.deepseek.com/v1",
+        aiProvider: String = "agnes",
+        aiBaseURL: String = "https://api.agnes-ai.cn/v1",
         aiApiKey: String = "",
-        aiModel: String = "deepseek-chat",
+        aiModel: String = "agnes-3.0-flash",
+        enableKeyRotation: Bool = true,
         enableGitHubSync: Bool = false,
         gitHubRepo: String = "",
         syncIntervalHours: Int = 2,
@@ -43,6 +53,7 @@ public struct AppSettings: Codable, Sendable {
         self.aiBaseURL = aiBaseURL
         self.aiApiKey = aiApiKey
         self.aiModel = aiModel
+        self.enableKeyRotation = enableKeyRotation
         self.enableGitHubSync = enableGitHubSync
         self.gitHubRepo = gitHubRepo
         self.syncIntervalHours = syncIntervalHours
@@ -52,6 +63,26 @@ public struct AppSettings: Codable, Sendable {
         self.enableThumbnails = enableThumbnails
         self.customIgnoredApps = customIgnoredApps
         self.theme = theme
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.aiProvider = try container.decodeIfPresent(String.self, forKey: .aiProvider) ?? "agnes"
+        self.aiBaseURL = try container.decodeIfPresent(String.self, forKey: .aiBaseURL) ?? "https://api.agnes-ai.cn/v1"
+        self.aiApiKey = try container.decodeIfPresent(String.self, forKey: .aiApiKey) ?? ""
+        self.aiModel = try container.decodeIfPresent(String.self, forKey: .aiModel) ?? "agnes-3.0-flash"
+        self.enableKeyRotation = try container.decodeIfPresent(Bool.self, forKey: .enableKeyRotation) ?? true
+
+        self.enableGitHubSync = try container.decodeIfPresent(Bool.self, forKey: .enableGitHubSync) ?? false
+        self.gitHubRepo = try container.decodeIfPresent(String.self, forKey: .gitHubRepo) ?? ""
+        self.syncIntervalHours = try container.decodeIfPresent(Int.self, forKey: .syncIntervalHours) ?? 2
+
+        self.suspendThresholdSeconds = try container.decodeIfPresent(Int.self, forKey: .suspendThresholdSeconds) ?? 10
+        self.transientThresholdSeconds = try container.decodeIfPresent(Int.self, forKey: .transientThresholdSeconds) ?? 30
+        self.maxDisplaySuspended = try container.decodeIfPresent(Int.self, forKey: .maxDisplaySuspended) ?? 5
+        self.enableThumbnails = try container.decodeIfPresent(Bool.self, forKey: .enableThumbnails) ?? true
+        self.customIgnoredApps = try container.decodeIfPresent([String].self, forKey: .customIgnoredApps) ?? ["1Password", "KeePassXC", "Keychain Access"]
+        self.theme = try container.decodeIfPresent(String.self, forKey: .theme) ?? "amber"
     }
 }
 

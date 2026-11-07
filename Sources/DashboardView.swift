@@ -92,10 +92,10 @@ public struct DashboardView: View {
 
     public var body: some View {
         HStack(spacing: 0) {
-            // MARK: - 1. 左侧侧边栏 (Sidebar: 固定宽度，安全避开红黄绿交通灯)
+            // MARK: - 1. 左侧侧边栏 (Sidebar: 宽敞呼吸感，安全避让系统红黄绿控制按钮)
             sidebarView
-                .frame(width: 220)
-                .layoutPriority(2) // 确保侧边栏绝对不会被主区域挤压出窗口
+                .frame(width: 236)
+                .layoutPriority(2)
                 .background(Color(NSColor.windowBackgroundColor).opacity(0.92))
 
             Divider().opacity(0.35)
