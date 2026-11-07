@@ -92,9 +92,9 @@ public struct DashboardView: View {
 
     public var body: some View {
         HStack(spacing: 0) {
-            // MARK: - 1. 左侧侧边栏 (Sidebar: 宽敞呼吸感，安全避让系统红黄绿控制按钮)
+            // MARK: - 1. 左侧侧边栏 (Sidebar: 宽敞呼吸感，安全避让系统红黄绿控制按钮，绝不截断)
             sidebarView
-                .frame(width: 236)
+                .frame(width: 248)
                 .layoutPriority(2)
                 .background(Color(NSColor.windowBackgroundColor).opacity(0.92))
 
@@ -102,7 +102,7 @@ public struct DashboardView: View {
 
             // MARK: - 2. 主内容工作区 (根据 Tab 路由分流)
             mainContentRouter
-                .frame(minWidth: 480, maxWidth: .infinity)
+                .frame(minWidth: 500, maxWidth: .infinity)
                 .background(VisualEffectView(material: .contentBackground, blendingMode: .behindWindow))
 
             // MARK: - 3. 右侧详情检查器 (仅在时间轴和挂起看板中展现)
@@ -115,7 +115,7 @@ public struct DashboardView: View {
                     .transition(.move(edge: .trailing))
             }
         }
-        .frame(minWidth: 960, minHeight: 600)
+        .frame(minWidth: 980, minHeight: 620)
         .overlay(alignment: .top) {
             if let toast = copyToastText {
                 HStack(spacing: 6) {
@@ -197,7 +197,7 @@ public struct DashboardView: View {
     // MARK: - 1. 左侧侧边栏 (Sidebar)
     private var sidebarView: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // App 品牌区域 (留出顶部 30pt 避让红黄绿窗口按钮)
+            // App 品牌区域 (留出顶部 34pt 避让红黄绿窗口按钮，左侧留足安全呼吸区)
             HStack(spacing: 8) {
                 ZStack {
                     Circle()
@@ -213,7 +213,7 @@ public struct DashboardView: View {
                         .font(.system(size: 13.5, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                         .lineLimit(1)
-                    Text("全景工作台 · v2.0")
+                    Text("全景工作台 · v2.1")
                         .font(.system(size: 9.5))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -221,8 +221,9 @@ public struct DashboardView: View {
 
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 32) // 关键：避开红黄绿交通灯高度
+            .padding(.leading, 20)
+            .padding(.trailing, 14)
+            .padding(.top, 34) // 关键：避开红黄绿交通灯高度
 
             // 今日专注统计看板小卡片
             VStack(alignment: .leading, spacing: 6) {
@@ -256,7 +257,8 @@ public struct DashboardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.55))
             .cornerRadius(8)
-            .padding(.horizontal, 12)
+            .padding(.leading, 18)
+            .padding(.trailing, 14)
 
             // 核心功能一级导航栏 (时间轴、对话搜索、日报、周报、挂起)
             VStack(spacing: 3) {
@@ -292,7 +294,8 @@ public struct DashboardView: View {
                     count: engine.suspendedSessions.count
                 )
             }
-            .padding(.horizontal, 10)
+            .padding(.leading, 16)
+            .padding(.trailing, 12)
 
             Spacer()
 
@@ -356,7 +359,8 @@ public struct DashboardView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, 18)
+            .padding(.trailing, 14)
             .padding(.bottom, 16)
         }
     }
