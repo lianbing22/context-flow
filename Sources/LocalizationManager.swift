@@ -50,7 +50,7 @@ public final class LocalizationManager: ObservableObject {
         return localizedStrings[activeLang]?[key] ?? localizedStrings["zh-Hans"]?[key] ?? key
     }
 
-    // 工业级三语字典库 (支持 DeepSeek Harness 插件模型与授权中心)
+    // 工业级三语字典库 (纯净自主品牌 ContextFlow，绝无竞品品牌字样)
     private let localizedStrings: [String: [String: String]] = [
         "zh-Hans": [
             "app_name": "全局记忆精灵",
@@ -107,10 +107,10 @@ public final class LocalizationManager: ObservableObject {
             "test_success": "连接成功",
             "test_failed": "连接失败，请检查 Base URL、API Key 与模型名称",
 
-            // 主题与外观
-            "theme_amber": "阶跃暖橘",
-            "theme_aurora": "极光深邃",
-            "theme_neon": "电光紫霓",
+            // 主题与外观 (纯净专业命名)
+            "theme_amber": "暖阳金橙",
+            "theme_aurora": "极光深蓝",
+            "theme_neon": "电光霓紫",
             "theme_paper": "极简纸墨",
             "theme_system": "跟随系统",
             "lang_label": "界面语言 (Language):"
@@ -170,8 +170,8 @@ public final class LocalizationManager: ObservableObject {
             "test_success": "Connection successful",
             "test_failed": "Connection failed. Please verify Base URL, API Key and Model Name.",
 
-            // Theme & Appearance
-            "theme_amber": "StepFun Amber",
+            // Theme & Appearance (Neutral Professional Names)
+            "theme_amber": "Warm Amber",
             "theme_aurora": "Aurora Deep",
             "theme_neon": "Electric Neon",
             "theme_paper": "Minimal Paper",
@@ -182,7 +182,7 @@ public final class LocalizationManager: ObservableObject {
             "app_name": "ContextFlow (記憶エルフ)",
             "app_sub": "パノラマワークスペース · v2.2",
             "nav_timeline": "全景タイムライン",
-            "nav_chat": "AI記憶対话",
+            "nav_chat": "AI記憶対話",
             "nav_daily": "本日日報",
             "nav_weekly": "今週週報",
             "nav_suspended": "中断タスク",
@@ -234,7 +234,7 @@ public final class LocalizationManager: ObservableObject {
             "test_failed": "接続失敗。Base URL、API Key、モデル名を確認してください。",
 
             // Theme & Appearance
-            "theme_amber": "階躍アンバー",
+            "theme_amber": "ウォームアンバー",
             "theme_aurora": "オーロラディープ",
             "theme_neon": "ネオンパープル",
             "theme_paper": "ミニマルペーパー",

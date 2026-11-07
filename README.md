@@ -18,7 +18,7 @@
 
 <p align="center">
   <strong>专为 macOS 打造的高性能工业级全局数字记忆、视窗现场守护与 AI 智能工作复盘助手。</strong><br>
-  参考阶跃星辰（跃问 StepFun）现代桌面端设计语言，深度践行 <strong>DeepSeek Harness</strong> 插件化架构理念，内置工业级 SQLite3 + FTS5 全文检索引擎，自适应识别本地模型与开发软件凭据，支持自带密钥（BYOK）与高可用多 Key 容灾轮换池，0 截图云端上传，完全离线可用与开源保护。
+  采用 ContextFlow 自研现代化桌面端设计语言，深度践行 <strong>DeepSeek Harness</strong> 插件化架构理念，内置工业级 SQLite3 + FTS5 全文检索引擎，自适应识别本地模型与开发软件凭据，支持自带密钥（BYOK）与高可用多 Key 容灾轮换池，0 截图云端上传，完全离线可用与开源保护。
 </p>
 
 ---
@@ -26,7 +26,7 @@
 ## 📸 界面全景一览 (Interface Gallery)
 
 ### 🖥️ 1. 全景时间轴主工作台 (Full Timeline Dashboard)
-> 阶跃星辰质感宽屏布局，侧边栏保留 20pt 绝对安全呼吸边距，彻底消灭文字裁切；多维横向胶囊分类 Chips（全部、💻开发、🌐浏览器、💬沟通、📝文档），顶部支持全局搜索与回车即时问答，右侧支持全景视窗详情审查与【恢复当时视窗现场】一键直达。
+> ContextFlow 质感宽屏布局，侧边栏保留 20pt 绝对安全呼吸边距，彻底消灭文字裁切；多维横向胶囊分类 Chips（全部、💻开发、🌐浏览器、💬沟通、📝文档），顶部支持全局搜索与回车即时问答，右侧支持全景视窗详情审查与【恢复当时视窗现场】一键直达。
 
 <p align="center">
   <img src="docs/screenshots/01_dashboard_timeline.png" alt="全景时间轴主工作台" width="95%" />
@@ -76,7 +76,7 @@
   - **Aider**: 自动提取 `~/.aider.conf.yml` / `~/.env` 中的 DeepSeek 模型凭据；
   - **Claude Desktop / VS Code**: 自动识别 MCP 服务与客户端生态；
 - **主流模型授权开放平台一键直达 (Cloud Providers)**：
-  - DeepSeek 深度求索（支持 DeepSeek-V3 与 R1 满血思考）、Agnes AI（多 Key 容灾池）、智谱 GLM、通义千问 (DashScope 百炼)、月之暗面 Kimi、阶跃星辰 StepFun、OpenAI；
+  - DeepSeek 深度求索（支持 DeepSeek-V3 与 R1 满血思考）、Agnes AI（多 Key 容灾池）、智谱 GLM、通义千问 (DashScope 百炼)、月之暗面 Kimi、OpenAI；
   - 支持一键打开控制台获取 Key，一键装配激活到当前环境。
 
 ### 2. 🗄️ 工业级 SQLite3 + FTS5 全文检索引擎

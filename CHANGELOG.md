@@ -17,7 +17,7 @@
     - **Claude Desktop**: 自动识别 MCP 配置与客户端生态；
     - **Roo Code / Cline**: 自动提取已授权的模型参数。
   - **主流大模型开放平台授权中心 (Cloud Providers)**：
-    - 原生适配 DeepSeek 深度求索（支持 DeepSeek-V3 与 R1 满血思考）、Agnes AI（多 Key 容灾池）、智谱 GLM、阿里云通义千问 (DashScope 百炼)、月之暗面 Kimi、阶跃星辰 StepFun、OpenAI；
+    - 原生适配 DeepSeek 深度求索（支持 DeepSeek-V3 与 R1 满血思考）、Agnes AI（多 Key 容灾池）、智谱 GLM、阿里云通义千问 (DashScope 百炼)、月之暗面 Kimi、OpenAI；
     - 提供【一键打开控制台授权】跳转与【一键装配激活】到当前工作环境。
 - **🌐 全量多语言国际化全覆盖 (Full i18n Coverage)**:
   - 核心本地化引擎 (`LocalizationManager.swift`) 全面覆盖插件化模型、授权中心、工作台各个面板；
@@ -55,7 +55,7 @@
   - 启用 WAL 高并发读写模式与 8MB 内存页缓存，确保高频窗口切换时微秒级写入，永不锁库；
   - 建立 SQLite FTS5 虚拟全文检索倒排索引（基于 `unicode61` 分词器），实现数万条足迹、标题与正文的毫秒级全文秒搜；
   - 规范设计 5 大核心关系表：`context_sessions`、`timeline_events`、`fts_timeline`、`daily_reports` 与 `app_settings`。
-- **🎨 阶跃星辰（跃问 StepFun）现代桌面端质感设计**:
+- **🎨 ContextFlow 现代化原生 macOS 质感宽屏桌面端设计**:
   - 全面重构主工作台界面 (`DashboardView.swift`)，默认自适应宽屏排布（`1140 × 740`），元素呼吸通透；
   - 彻底重构设置面板 (`SettingsView.swift`)，消灭怪异悬浮黑条与 `>>` 折叠菜单，改用原生平铺高档胶囊分段导航；
   - 顶部搜索框支持自适应伸缩，横向分类 Chips（`全部`、`💻开发`、`🌐浏览器`、`💬沟通`、`📝文档`）流式横滑，永不被挤断；

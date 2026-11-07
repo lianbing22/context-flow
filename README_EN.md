@@ -18,7 +18,7 @@
 
 <p align="center">
   <strong>High-performance industrial-grade global digital memory, window context guardian, and AI work wrap-up copilot crafted for macOS.</strong><br>
-  Built with StepFun modern desktop aesthetic, fully adopting the <strong>DeepSeek Harness</strong> "Everything is a Plugin" design philosophy. Embedded with an industrial-grade SQLite3 + FTS5 inverted full-text search engine, auto-discovering local models & IDE credentials, high-availability multi-key failover pool, zero cloud image uploads, completely offline-capable and open-source.
+  Built with ContextFlow's signature modern panoramic desktop design system, fully adopting the <strong>DeepSeek Harness</strong> "Everything is a Plugin" design philosophy. Embedded with an industrial-grade SQLite3 + FTS5 inverted full-text search engine, auto-discovering local models & IDE credentials, high-availability multi-key failover pool, zero cloud image uploads, completely offline-capable and open-source.
 </p>
 
 ---
@@ -26,7 +26,7 @@
 ## 📸 Interface Gallery
 
 ### 🖥️ 1. Full Timeline Dashboard
-> StepFun-styled panoramic workspace with a 20pt guaranteed safe left-margin that eliminates sidebar truncation. Features multi-dimensional horizontal classification chips (All, 💻 Dev, 🌐 Browser, 💬 Chat, 📝 Docs), flexible search bar with instant Enter-to-chat, and inspector details with one-click window context restoration.
+> ContextFlow panoramic workspace with a 20pt guaranteed safe left-margin that eliminates sidebar truncation. Features multi-dimensional horizontal classification chips (All, 💻 Dev, 🌐 Browser, 💬 Chat, 📝 Docs), flexible search bar with instant Enter-to-chat, and inspector details with one-click window context restoration.
 
 <p align="center">
   <img src="docs/screenshots/01_dashboard_timeline.png" alt="Full Timeline Dashboard" width="95%" />
@@ -75,7 +75,7 @@
   - **Continue**: Safely reads model lists, Base URLs, and keys from `~/.continue/config.json`.
   - **Aider**: Extracts credentials from `~/.aider.conf.yml` / `~/.env`.
   - **Claude Desktop / VS Code**: Probes MCP servers and client extensions.
-- **Mainstream Cloud Platforms**: Direct authorization portals and one-click adoption for DeepSeek Official (DeepSeek-V3 & R1 reasoning), Agnes AI, Zhipu GLM, Qwen (DashScope), Moonshot Kimi, StepFun, and OpenAI.
+- **Mainstream Cloud Platforms**: Direct authorization portals and one-click adoption for DeepSeek Official (DeepSeek-V3 & R1 reasoning), Agnes AI, Zhipu GLM, Qwen (DashScope), Moonshot Kimi, and OpenAI.
 
 ### 2. 🗄️ Industrial SQLite3 WAL + FTS5 Full-Text Engine
 - **High-Concurrency WAL Mode**: Built-in macOS native `SQLite3` with Write-Ahead Logging and 8MB cache pages, effortlessly handling microsecond window switches without lockouts.

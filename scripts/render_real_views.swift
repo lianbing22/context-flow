@@ -142,7 +142,7 @@ struct MockFullDashboardView: View {
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("阶跃暖橘")
+                            Text("暖阳金橙")
                                 .font(.system(size: 9.5))
                                 .foregroundColor(.orange)
                         }

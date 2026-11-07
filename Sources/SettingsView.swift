@@ -429,7 +429,6 @@ public struct SettingsView: View {
                             Text("智谱 GLM-4-Flash (超高性价比)").tag("zhipu")
                             Text("通义千问 (DashScope 百炼)").tag("qwen")
                             Text("月之暗面 Kimi (超长文本)").tag("kimi")
-                            Text("阶跃星辰 StepFun").tag("stepfun")
                             Text("OpenAI (官方 GPT-4o)").tag("openai")
                             Text("Ollama (本地离线大模型)").tag("ollama")
                             Text("自定义兼容中转 (Custom)").tag("custom")
@@ -440,7 +439,7 @@ public struct SettingsView: View {
                         }
                     }
 
-                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 DeepSeek、Agnes、智谱、通义千问、Kimi 或本地 Ollama。")
+                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 DeepSeek、Agnes、智谱、通义千问、Kimi 或本地离线模型。")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .padding(.leading, 102)

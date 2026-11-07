@@ -3,9 +3,9 @@ import Cocoa
 
 public enum AppTheme: String, CaseIterable, Identifiable, Codable {
     case system = "system"
-    case amber = "amber"       // 阶跃暖橘 (对标阶跃星AI)
-    case aurora = "aurora"     // 极光深邃 (程序员黑客风)
-    case neon = "neon"         // 电光紫霓 (未来科技风)
+    case amber = "amber"       // 暖阳金橙 (经典护眼暖色)
+    case aurora = "aurora"     // 极光深蓝 (沉浸极客蓝)
+    case neon = "neon"         // 电光霓紫 (未来科技紫)
     case paper = "paper"       // 极简纸墨 (纯净专注风)
 
     public var id: String { rawValue }
@@ -13,9 +13,9 @@ public enum AppTheme: String, CaseIterable, Identifiable, Codable {
     public var displayName: String {
         switch self {
         case .system: return "跟随系统"
-        case .amber: return "阶跃暖橘"
-        case .aurora: return "极光深邃"
-        case .neon: return "电光紫霓"
+        case .amber: return "暖阳金橙"
+        case .aurora: return "极光深蓝"
+        case .neon: return "电光霓紫"
         case .paper: return "极简纸墨"
         }
     }
@@ -23,7 +23,7 @@ public enum AppTheme: String, CaseIterable, Identifiable, Codable {
     public var subtitle: String {
         switch self {
         case .system: return "原生毛玻璃，匹配 macOS 浅色/深色"
-        case .amber: return "阶跃星AI同款暖色调，温暖高亮与柔光"
+        case .amber: return "温润通透的经典暖橙色调，温暖高亮与舒适聚焦"
         case .aurora: return "黑曜石暗黑底色，搭配薄荷极光蓝"
         case .neon: return "高对比度深紫电光，硬核极客科技质感"
         case .paper: return "纯粹素雅灰白纸面，专注内容无视觉干扰"

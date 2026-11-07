@@ -126,7 +126,7 @@ public final class ModelPluginHarness: @unchecked Sendable {
                 }
             }
 
-            // 4. 注入主流模型厂商预设插件 (DeepSeek, Agnes, Zhipu, Qwen, Kimi, StepFun, OpenAI)
+            // 4. 注入主流模型厂商预设插件 (DeepSeek, Agnes, Zhipu, Qwen, Kimi, OpenAI)
             let cloudPresets = buildMainstreamCloudPresets(withExistingKeys: foundKeys)
             for cp in cloudPresets {
                 if !plugins.contains(where: { $0.id == cp.id }) {
@@ -540,19 +540,6 @@ public final class ModelPluginHarness: @unchecked Sendable {
                 portalURL: "https://platform.moonshot.cn/console/api-keys",
                 isAvailable: true,
                 description: "超长上下文长文本大模型"
-            ),
-            ModelServicePlugin(
-                id: "stepfun.preset",
-                name: "阶跃星辰 StepFun",
-                category: .cloudProvider,
-                provider: "stepfun",
-                baseURL: "https://api.stepfun.com/v1",
-                models: ["step-1-8k", "step-2-16k"],
-                detectedKey: nil,
-                authStatus: "支持 StepFun 开放平台 API Key",
-                portalURL: "https://platform.stepfun.com",
-                isAvailable: true,
-                description: "阶跃星辰全模态与逻辑推理模型"
             )
         ]
     }

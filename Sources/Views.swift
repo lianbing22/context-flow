@@ -17,7 +17,7 @@ public struct MainPopoverView: View {
     @State private var isWrapUpGenerating: Bool = false
     @State private var selectedCategory: ContextEngine.FilterCategory = .all
 
-    // 借鉴阶跃AI：全景复盘中心 (日报 / 周报) 弹窗
+    // 全景复盘中心 (日报 / 周报) 弹窗
     @State private var activeBriefing: DailyWrapUp? = nil
     @State private var showingBriefingSheet: Bool = false
 
@@ -74,7 +74,7 @@ public struct MainPopoverView: View {
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
             }
 
-            // 借鉴阶跃AI：晨间规划 / 每日工作全景复盘大卡片 (Sheet 遮罩)
+            // 晨间规划 / 每日工作全景复盘大卡片 (Sheet 遮罩)
             if showingBriefingSheet, let briefing = activeBriefing {
                 DailyBriefingModal(briefing: briefing, onClose: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -139,7 +139,7 @@ public struct MainPopoverView: View {
                 }
             }
 
-            // 借鉴阶跃AI：一键放大展开为全景工作台独立大窗口
+            // 一键放大展开为全景工作台独立大窗口
             Button(action: {
                 DashboardWindowController.shared.showWindow()
             }) {
@@ -242,7 +242,7 @@ public struct MainPopoverView: View {
                             .foregroundColor(.primary)
                             .lineSpacing(3)
 
-                        // 借鉴阶跃AI：问答结果支持一键直达对应现场
+                        // 问答结果支持一键直达对应现场
                         if let matched = engine.suspendedSessions.first(where: { s in
                             ans.contains(s.primaryApp) || (s.detectedProject.map { ans.contains($0) } ?? false)
                         }) {
@@ -561,7 +561,7 @@ public struct MainPopoverView: View {
 
             Spacer()
 
-            // 借鉴阶跃AI：一键生成并弹出【今日全景复盘与晨间规划】
+            // 一键生成并弹出【今日全景复盘与晨间规划】
             Button(action: {
                 isWrapUpGenerating = true
                 engine.generateTodayWrapUp { wrapUp in
@@ -633,7 +633,7 @@ public struct MainPopoverView: View {
     }
 }
 
-// MARK: - 挂起卡片组件 (吸收阶跃AI：视窗快照微缩图 + 可点击下一步行动胶囊)
+// MARK: - 挂起卡片组件 (视窗快照微缩图 + 可点击下一步行动胶囊)
 
 struct SuspendedSessionCard: View {
     let session: ContextSession
@@ -684,7 +684,7 @@ struct SuspendedSessionCard: View {
                         .foregroundColor(.primary)
                 }
 
-                // 借鉴阶跃AI：视窗快照微缩图 (点击可直接一键恢复)
+                // 视窗快照微缩图 (点击可直接一键恢复)
                 if let thumb = session.thumbnailPath,
                    FileManager.default.fileExists(atPath: thumb),
                    let nsImg = NSImage(contentsOfFile: thumb) {
@@ -708,7 +708,7 @@ struct SuspendedSessionCard: View {
                 }
             }
 
-            // 2. AI 提炼意图与【可交互下一步行动胶囊】(借鉴阶跃AI行动化理念)
+            // 2. AI 提炼意图与【可交互下一步行动胶囊】(自主行动化理念)
             if let ai = session.aiSummary, !ai.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     if ai != session.title {
@@ -856,7 +856,7 @@ struct SuspendedSessionCard: View {
     }
 }
 
-// MARK: - 借鉴阶跃AI：全景复盘中心 (支持 日报 / 周报 双模态切换)
+// MARK: - 全景复盘中心 (支持 日报 / 周报 双模态切换)
 
 struct DailyBriefingModal: View {
     let briefing: DailyWrapUp

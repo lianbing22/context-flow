@@ -18,7 +18,7 @@
 
 <p align="center">
   <strong>macOS 専用に設計された産業級の全景デジタル記憶・作業現場保護・AI 振り返りコパイロット。</strong><br>
-  StepFun のモダンデスクトップ美学を継承し、<strong>DeepSeek Harness</strong> の「すべてはプラグインである（Everything is a Plugin）」哲学を深く実践。産業級 SQLite3 + FTS5 全文検索エンジンを内蔵し、ローカルモデル・開発環境認証の自動スキャン、複数キーの冗長化自動切り替え、クラウド画像送信ゼロ、完全オフライン対応のオープンソースソリューションです。
+  ContextFlow 独自のスムーズなワイドパノラマデスクトップ設計を採用し、<strong>DeepSeek Harness</strong> の「すべてはプラグインである（Everything is a Plugin）」哲学を深く実践。産業級 SQLite3 + FTS5 全文検索エンジンを内蔵し、ローカルモデル・開発環境認証の自動スキャン、複数キーの冗長化自動切り替え、クラウド画像送信ゼロ、完全オフライン対応のオープンソースソリューションです。
 </p>
 
 ---
@@ -26,7 +26,7 @@
 ## 📸 インターフェースギャラリー (Interface Gallery)
 
 ### 🖥️ 1. 全景タイムライン・ワークスペース (Full Timeline Dashboard)
-> StepFun 調のワイドレイアウト。サイドバーに 20pt の安全マージンを確保し文字切れを根絶。多次元分類タグ（すべて、💻開発、🌐ブラウザ、💬連絡、📝文書）、検索バーからの即時 AI 質問、詳細インスペクターと【当時のウィンドウ現場を復元】を完備。
+> ContextFlow ワイドレイアウト。サイドバーに 20pt の安全マージンを確保し文字切れを根絶。多次元分類タグ（すべて、💻開発、🌐ブラウザ、💬連絡、📝文書）、検索バーからの即時 AI 質問、詳細インスペクターと【当時のウィンドウ現場を復元】を完備。
 
 <p align="center">
   <img src="docs/screenshots/01_dashboard_timeline.png" alt="全景タイムライン" width="95%" />
@@ -75,7 +75,7 @@
   - **Continue**: `~/.continue/config.json` からエンドポイントとキーを取得。
   - **Aider**: `~/.aider.conf.yml` / `~/.env` からモデル設定を取得。
   - **Claude Desktop / VS Code**: MCP サーバとクライアント連携。
-- **主要クラウド LLM 認証ハブ**: DeepSeek（DeepSeek-V3 / R1）、Agnes AI、Zhipu GLM、Qwen (DashScope)、Moonshot Kimi、StepFun、OpenAI の公式認証コンソールへ直接アクセスし、ワンクリックで適用可能。
+- **主要クラウド LLM 認証ハブ**: DeepSeek（DeepSeek-V3 / R1）、Agnes AI、Zhipu GLM、Qwen (DashScope)、Moonshot Kimi、OpenAI の公式認証コンソールへ直接アクセスし、ワンクリックで適用可能。
 
 ### 2. 🗄️ 産業級 SQLite3 WAL + FTS5 全文検索エンジン
 - **高並行 WAL モード**: macOS ネイティブの SQLite3 データベースを採用し、ミリ秒単位の頻繁なウィンドウ切り替えでも書き込みロックなし。
@@ -118,7 +118,7 @@ open 全局记忆精灵.app
 ## 🔒 プライバシー保護 (Privacy First)
 
 - **100% ローカル保存**: すべての記録と SQLite DB は `~/.contextflow/` に安全に保管。
-- **画像クラウド送信ゼロ**: スナップショットと OCR は Apple Neural Engine 上でオフライン完結。
+- **画像クラウド送信ゼロ**: スナップショットと OCR は Apple Neural Engine 上でオフライン完结。
 - **機密アプリの完全除外**: 1Password やシステム Keychain などのパスワード画面は自動ブロック。
 
 ---
