@@ -3,35 +3,40 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS%2013.0%2B-blue?style=flat-square&logo=apple" alt="macOS 13.0+" />
   <img src="https://img.shields.io/badge/Swift-6.0%20%7C%20SwiftUI-orange?style=flat-square&logo=swift" alt="Swift 6.0" />
+  <img src="https://img.shields.io/badge/Database-SQLite3%20WAL%20%2B%20FTS5-blueviolet?style=flat-square" alt="SQLite3 + FTS5" />
   <img src="https://img.shields.io/badge/Architecture-Apple%20Neural%20Engine-success?style=flat-square" alt="Apple Neural Engine" />
-  <img src="https://img.shields.io/badge/Privacy-100%25%20Local%20OCR-brightgreen?style=flat-square" alt="100% Local OCR" />
+  <img src="https://img.shields.io/badge/Privacy-100%25%20Local%20Storage-brightgreen?style=flat-square" alt="100% Local Storage" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
 </p>
 
 <p align="center">
-  <strong>专为 macOS 打造的轻量级商业级全局工作记忆、现场守护与每日智能复盘助手。</strong><br>
-  对齐商业级应用（Rewind / 阶跃AI）核心能力，端侧离线视觉穿透，自带模型密钥（BYOK），0 截图云端上传，完全保护隐私与开源自由。
+  <strong>专为 macOS 打造的高性能工业级全局数字记忆、视窗现场守护与 AI 智能工作复盘助手。</strong><br>
+  参考阶跃星辰（跃问 StepFun）现代桌面端设计语言，内置工业级 SQLite3 + FTS5 全文检索引擎，自带模型密钥（BYOK）与高可用多 Key 容灾轮换池，0 截图云端上传，完全离线可用与开源保护。
 </p>
 
 ---
 
-## 📸 界面一览 (Screenshots)
+## 📸 界面全景一览 (Interface Gallery)
 
 ### 🖥️ 1. 全景时间轴主工作台 (Full Timeline Dashboard)
-> 宽敞呼吸感左侧栏与顶部安全内边距，彻底避免视窗挤压，横向紧凑多维分类 Chips（全部、开发、浏览器、沟通、文档），右侧 Inspector 详情检查器与【恢复当时视窗现场】一键直达。
+> 阶跃星辰质感宽屏布局，集成多维分类 Chips（全部、💻开发、🌐浏览器、💬沟通、📝文档），顶部支持全局搜索与回车即时问答，右侧支持全景视窗详情审查与【恢复当时视窗现场】一键直达。
 
 <p align="center">
   <img src="docs/screenshots/01_dashboard_timeline.png" alt="全景时间轴主工作台" width="95%" />
 </p>
 
-### 💬 2. AI 全局记忆对话专页 (Ask Memory Chat)
-> 对标商业级 AI 核心能力，直接针对全景记忆自然语言提问（如“今天在微信开发者工具推进了什么”），AI 结合本地真实足迹给出深度提炼答复并列出关联现场证据。
+---
+
+### 💬 2. AI 全局记忆对话搜索 (Ask Memory Chat)
+> 对标商业级 AI 核心能力，直接针对全景记忆进行自然语言提问（如“我在反重力里开发了什么项目 进度如何”），系统结合本地真实 SQLite 数据库足迹与防幻觉屏障，秒级输出高清晰度客观业务答复并提供关联现场证据。
 
 <p align="center">
   <img src="docs/screenshots/02_dashboard_chat.png" alt="AI 记忆对话专页" width="95%" />
 </p>
 
-### 📅 3. 日报与周报全景大屏 (Daily & Weekly Wrap-up)
+---
+
+### 📅 3. 日报与周报全景复盘大屏 (Daily & Weekly Wrap-up)
 
 <table align="center">
   <tr>
@@ -45,170 +50,148 @@
       <strong>📅 本周工作周报与投入分析 (Weekly Hub)</strong><br><br>
       <img src="docs/screenshots/04_dashboard_weekly.png" alt="本周工作周报" width="100%" />
       <br>
-      <em>项目研发投入占比进度条 · 每日脉络追踪 · 下周重点规划</em>
+      <em>项目研发投入占比可视化进度条 · 每日脉络追踪 · 下周重点推进规划</em>
     </td>
   </tr>
 </table>
 
-### ⚙️ 4. 高可用多 Key 智能轮换池与偏好设置 (BYOK & Failover Pool)
-> 开箱即用支持 Agnes AI、DeepSeek、智谱 GLM、OpenAI 及本地 Ollama。独创多 Key 智能轮换池，多通道负载均衡，限流或超时毫秒级自动故障转移（Failover），保证意图提炼与记忆问答永不中断。
+---
+
+### ⚙️ 4. 现代化偏好设置 (Native Preferences Panel)
+> 彻底重构为原生分段导航栏，杜绝折叠溢出与浮动黑条，排版严整考究。支持自带密钥 (BYOK)、高可用多 Key 智能轮换池、隐私黑名单、数字编年史 GitHub 归档、5 套个性化主题与 SQLite 数据库维护。
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <strong>✨ AI 记忆引擎与多 Key 容灾池</strong><br><br>
+      <img src="docs/screenshots/settings_ai.png" alt="AI 记忆引擎与多 Key 容灾池" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <strong>📚 数字编年史与 GitHub 私有归档</strong><br><br>
+      <img src="docs/screenshots/settings_lifelog.png" alt="数字编年史与 GitHub 私有归档" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>🛡️ 隐私保护与应用拦截黑名单</strong><br><br>
+      <img src="docs/screenshots/settings_privacy.png" alt="隐私保护与应用拦截黑名单" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <strong>🎨 5 套精调阶跃质感配色主题</strong><br><br>
+      <img src="docs/screenshots/settings_appearance.png" alt="5 套精调阶跃质感配色主题" width="100%" />
+    </td>
+  </tr>
+</table>
 
 <p align="center">
-  <img src="docs/screenshots/05_settings_ai_pool.png" alt="高可用多 Key 智能轮换池与偏好设置" width="80%" />
+  <img src="docs/screenshots/settings_general.png" alt="权限检测与 SQLite 数据库维护" width="60%" /><br>
+  <em>⚙️ 系统权限即时检测 · 离开瞬间微缩图 · 本地 SQLite3 + FTS5 引擎状态与维护</em>
 </p>
 
 ---
 
-## 🌟 核心亮点与对齐功能 (Key Features)
+## 🌟 核心特性与架构亮点 (Key Highlights)
 
-### 1. 🔍 对话搜索与多维上下文过滤 (Context Search & Multi-dimension Filter)
-* **全域关键词秒级直达**：输入项目名、窗口标题、网址或文本，毫秒级检索所有专注现场与挂起足迹；
-* **五大应用分类 Chips**：一键切换【全部】、【💻 开发】、【🌐 浏览器】、【💬 沟通】、【📝 文档】，快速精准锁定当时上下文；
-* **自然语言直接问答**：浮窗内直接提问（如“今天上午改了什么代码？”、“看了哪些平台？”），AI 本地结合记忆即时回答。
+### 1. 🗄️ 工业级 SQLite3 + FTS5 全文检索引擎
+* **原生嵌入式架构**：告别脆弱的扁平 JSON 文件，全面迁移至 macOS 原生 SQLite3，启用高并发 WAL 模式与 8MB 内存页缓存；
+* **FTS5 倒排索引全文搜索**：基于 `unicode61` 分词器，毫秒级检索数万条窗口标题、正文、代码路径与会话意图；
+* **进程安全与持久化**：时序足迹实时落盘于 `~/.contextflow/contextflow.sqlite3`，异常断电或退出零数据丢失。
 
-### 2. 📅 日报 (Daily) / 周报 (Weekly) 双模态全景工作复盘
-* **☀️ 今日全景日报**：结构化归纳今日攻坚项目、专注分钟数、核心突破与明日跟进清单；
-* **📅 本周工作周报**：跨 7 天聚合统计各项目时间投入，精准计算各项目研发**耗时与占比百分比（附可视化进度条）**；
-* **智能下周规划建议**：根据本周实际攻坚瓶颈与进展，AI 自动生成高可行性的下周推进规划；
-* **一键导出标准 Markdown**：一键复制周报/日报 Markdown，直接粘贴至飞书、语雀、钉钉或周例会邮件汇报。
+### 2. ⚡️ 高可用多 API Key 智能轮换池与超时故障转移 (Failover)
+* **BYOK 自带密钥自由**：全面兼容 OpenAI 标准协议，预设支持 Agnes AI、DeepSeek、智谱 GLM-4-Flash、OpenAI、SiliconFlow 及本地 Ollama；
+* **智能轮换机制**：高频意图提炼时按顺序分配各 Key 负载，有效分散限流风险；
+* **秒级故障转移**：遇到 `429 Too Many Requests` 或网络连接超时，自动无感切换至备用通道继续执行，保障体验不中断；
+* **开箱即用离线保障**：若未填写 API Key 或处于断网环境，自动启用端侧 Apple Neural Engine 离线实体提取与对话应答，完全可用。
 
-### 3. 🎨 5 套专业质感主题系统 (Rich Theme Settings)
-* **跟随系统 (System Native)**：智能适配 macOS 原生浅色与深色模式，自然融合；
-* **阶跃暖橘 (StepFun Amber)**：对齐商业级 AI 助手经典灵动暖橙视觉风格；
-* **极光深邃 (Aurora Deep)**：专为夜间与沉浸式编程打造的极光蓝绿暗色系；
-* **电光紫霓 (Electric Neon)**：现代极客科技感霓虹紫渐变；
-* **极简纸墨 (Minimal Paper)**：高对比度、无干扰的黑白极简纸墨风格；
-* **即时全局生效**：在偏好设置卡片中单选预览，主菜单浮窗与全景工作台毫秒级同步换肤。
+### 3. 🛡️ 深度视窗穿透与防幻觉降噪屏障
+* **内核级无感感知**：基于 CoreGraphics 与 Accessibility 穿透 Chromium 内核与 IDE，直接获取真实标签页标题、文档路径与前台正文；
+* **开发环境侧边栏降噪**：内置黑名单深度屏蔽 Antigravity、Claude 等工具侧边栏的历史会话列表，杜绝将背景杂乱信息误当成当前任务；
+* **事实边界锁定**：在提问与提炼时注入严格反幻觉防线，绝不凭空捏造怪异虚假任务。
 
-### 4. 🧠 真实视窗穿透与端侧神经网络 OCR
-* **穿透内核**：嗅探真实标签页标题、业务平台与文件路径；
-* **100% 本地 Vision 神经网络**：离开瞬间由 Apple Neural Engine 离线毫秒级提取大字实体，**0 截图上传云端，完全保护隐私**。
-
----
-
-## 💡 为什么你需要全局记忆精灵？
-
-在现代日常办公与研发中，你经常面临这些痛点：
-* **多任务频繁切换**：正在处理合同、写代码或查资料，突然被即时通讯、临时会议打断，切回来后根本想不起“刚才改到哪一步了”；
-* **传统工具很“傻”**：只看得到进程名（如 `Chrome`、`Finder`），根本不知道你屏幕上真正开着的业务是**“云原生网关配置联调”**还是**“接口架构重构”**；
-* **车轱辘废话**：假 AI 工具动辄输出“使用浏览器应用”、“处理相关任务”，毫无业务信息量；
-* **隐私顾虑**：商业闭源录屏软件动辄上传屏幕至云端，面临严重的安全和隐私泄露风险。
-
-**全局记忆精灵在后台为你提供：**
-1. **真实视窗穿透**：穿透 Chromium / Webkit 内核（Chrome、Edge、ego lite、Safari）与现代 IDE，直接嗅探真实标签页标题、业务平台与文件路径；
-2. **端侧神经网络视觉（Apple Neural Engine）**：离开瞬间由本地离线神经引擎毫秒级 OCR 提炼屏幕核心文字，**屏幕快照绝不上传云端，完全本地化**；
-3. **拒绝套话，直击业务**：严格的 Anti-Slop 反废话机制，精准提炼具体业务实体（如：`Swift 6 结构化并发与内存安全重构`）；
-4. **行动化胶囊**：提供【⚡️ 下一步：... →】可交互行动胶囊，点击一键唤醒并恢复当时的工作窗口現場；
-5. **权限长效锁定**：采用固定 Designated Requirement 深度签名，一次授权长期有效，升级重启绝不反复弹窗。
+### 4. 📊 商业级全景复盘与周报分析大屏
+* **今日全景日报**：结构化归纳今日攻坚项目、专注分钟数、核心突破与明日行动清单；
+* **本周工作周报**：跨 7 天聚合统计各项目时间投入，精准计算各项目研发**耗时与占比百分比（附可视化进度条）**；
+* **一键复制 Markdown**：一键生成排版工整的标准 Markdown，快速粘贴至飞书、语雀、钉钉或向团队汇报。
 
 ---
 
 ## 🚀 极速上手 (Quick Start)
 
-### 1. 克隆仓库与一键编译
-需要 macOS 13.0+ 及 Xcode Command Line Tools (`xcode-select --install`)。
+### 1. 编译与打包
+确保运行环境为 macOS 13.0+，并已安装 Xcode 命令行工具 (`xcode-select --install`)。
+
 ```bash
+# 1. 克隆代码仓库
 git clone https://github.com/lianbing22/context-flow.git
 cd context-flow
 
-# 赋予执行权限并一键编译
+# 2. 一键编译与代码签名
 chmod +x build.sh
 ./build.sh
 ```
-编译脚本会在项目根目录下构建生成已完成深度长效签名的 `全局记忆精灵.app`。
 
-### 2. 启动应用
+编译完成后，将在项目根目录下生成已完成长效代码签名的 `全局记忆精灵.app`。
+
+### 2. 启动与授权
+直接双击打开 `全局记忆精灵.app`，或在终端中运行：
 ```bash
 open 全局记忆精灵.app
 ```
-启动后，菜单栏右上角将出现 `⚡️` 常驻图标。
 
-### 3. 授权说明 (请求一次，长期有效)
-首次启动时，根据提示在 macOS【系统设置 -> 隐私与安全性】中授予两项基础权限：
-- **辅助功能 (Accessibility)**：用于毫秒级捕获前台窗口标题与浏览器当前标签；
-- **屏幕录制与快照 (Screen Recording)**：用于在切换离开瞬间由 Apple 本地神经引擎离线抓取核心大字实体。
-
-> **无需担心反复弹窗**：本项目采用固定 Designated Requirement 签名（`app.memoryelf`），系统 TCC 数据库将权限永久绑定至应用标识，重新编译升级也无需反复授权。
+* **权限指引**：首次启动时，请在【偏好设置 - 权限与维护】中开启 **辅助功能 (Accessibility)** 权限，用于毫秒级穿透前台窗口标题与业务正文。
+* **数据目录**：所有会话、时序流水与快照均保存在本地 `~/.contextflow` 目录下，100% 本地掌控。
 
 ---
 
-## ⚙️ 设置指南 (Configuration Guide)
+## 📖 核心使用场景指南 (Usage Guide)
 
-点击状态栏浮窗底部的 **齿轮 ⚙️** 图标，即可打开开源设置控制台：
+### 场景一：随时唤醒全景工作台
+* 点击 macOS 菜单栏上的闪电图标，在微型挂起卡片中点击【全景大工作台】展开宽屏界面；
+* 支持自由拉伸缩放与全屏排布，任意屏幕尺寸均舒展通透。
 
-### 1. 🤖 AI 记忆引擎配置 (自带密钥 BYOK)
-全局记忆精灵支持任意兼容 OpenAI 标准协议的大模型接口：
+### 场景二：与 AI 记忆对话，查找工作足迹
+* 在工作台左侧点击【AI 记忆对话】，或在时间轴搜索框输入问题直接按回车；
+* 示例提问：
+  - *“我在反重力里开发了什么项目 进度如何？”*
+  - *“今天在微信开发者工具中推进了什么？”*
+  - *“总结今天在各个应用的花费时间”*
 
-| 服务提供商 | 默认 Base URL | 推荐模型 | 特点 |
-| :--- | :--- | :--- | :--- |
-| **DeepSeek (官方)** *(推荐)* | `https://api.deepseek.com/v1` | `deepseek-chat` | 性价比极高，中文业务实体提炼极为敏锐 |
-| **智谱 GLM-4-Flash** | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash` | 毫秒级极速响应，新用户有充足免费额度 |
-| **OpenAI (官方)** | `https://api.openai.com/v1` | `gpt-4o-mini` | 国际标准接口，稳定通用 |
-| **SiliconFlow (硅基流动)** | `https://api.siliconflow.cn/v1` | `Qwen/Qwen2.5-7B-Instruct` | 开源大模型高并发中转 |
-| **Ollama (本地离线)** | `http://localhost:11434/v1` | `qwen2.5:7b` | **完全离线断网运行，0元开销，隐私绝密** |
-| **自定义兼容中转 (Custom)** | 自定义输入 | 自定义输入 | 支持任意第三方 API 或自建网关 |
+### 场景三：下班复盘与周五汇报
+* 点击【今日日报】或【本周周报】，点击右上角的【复制日报 Markdown】或【复制周报 Markdown】；
+* 直接粘贴到周会报告、团队协作群或个人数字笔记中。
 
-* **测试连通性**：填入你的 API Key 后，点击【测试连通性】，系统会自动发送心跳并回显网络延迟（如 `✓ 连接成功！响应延迟 220ms`）；
-* **离线无 Key 保护**：若暂不配置 API Key，全局记忆精灵将自动启用 Apple Neural Engine 本地离线规则与实体提取，功能完全可用，0 报错。
-
-### 2. 🛡️ 隐私与黑名单 (Privacy Exclusions)
-* **默认安全机制**：1Password、KeePassXC、Keychain Access 等密码管理器与系统安全鉴权弹窗已预置在永久过滤名单中；
-* **自定义黑名单**：在文本框中输入你希望忽略的应用名（如游戏、私人聊天等）并点击“添加”，该应用在前台时将完全不记录、不挂起、不生成快照。
-
-### 3. 📖 数字编年史与私有归档 (GitHub Sync)
-* 在 GitHub 上新建一个 **Private（私有）** 空仓库（例如 `yourname/my-digital-lifelog`）；
-* 在设置中勾选 **“启用 GitHub 私有归档自动同步”**，并填入仓库名；
-* 设置自动同步周期（如每 2 小时自动同步）；
-* 全局记忆精灵会在本地生成结构化的 Markdown 编年史，并静默推送到你的私有仓库，实现终身数字资产私有永存。
-
-### 4. 🎛️ 感知参数调节
-* **微打断宽限时间**：滑块支持 10s ~ 120s 调节（默认 30 秒）。临时切去微信回一句话、去备忘录看一眼手机号小于该时长，均视为主任务背景音，不打断原工作现场。
-* **状态栏常驻上限**：支持 3 ~ 15 个现场调节（默认 5 个），超出自动沉淀为已完成归档，保持菜单栏轻量清爽。
+### 场景四：配置高可用 API Key 密钥池
+* 打开【偏好设置 - AI 记忆引擎】；
+* 在“API 密钥”输入框中粘贴您的 Key（支持多行录入多个 Key）；
+* 开启【多 Key 智能轮换与超时自动故障转移】，点击【测试连通性】验证密钥池可用性。
 
 ---
 
-## 🏗️ 架构与工程设计
+## 🛠️ 项目工程结构 (Repository Structure)
 
-```
+```text
 context-flow/
-├── 全局记忆精灵.app          # 构建生成的独立原生应用
-├── build.sh                 # 工程一键编译与深度代码签名脚本
-├── Info.plist               # App 元数据与权限声明
-├── LICENSE                  # MIT 开源许可证
-├── README.md                # 商业级项目使用指南
+├── Sources/
+│   ├── main.swift                 # 应用生命周期、外部通知分发与命令行处理
+│   ├── ContextEngine.swift        # 状态机核心：工作现场切换、计时与挂起逻辑
+│   ├── DatabaseManager.swift      # SQLite3 WAL 核心数据库与 FTS5 全文检索引擎
+│   ├── ContextStore.swift         # 统一存储协调器 (SQLite 双向同步)
+│   ├── WindowInspector.swift      # 窗口感知探查器：CoreGraphics 与 Accessibility 穿透
+│   ├── AISummarizer.swift         # AI 意图提炼、多 Key 容灾轮换池与记忆对话
+│   ├── DashboardView.swift        # 阶跃质感全景工作台大界面 (时间轴、对话、日报、周报)
+│   ├── SettingsView.swift         # 现代原生偏好设置面板 (原生胶囊导航、BYOK、权限)
+│   ├── Views.swift                # 状态栏微型悬浮窗与通用 UI 组件
+│   └── LifeLogSyncManager.swift   # GitHub 私有归档自动化同步
 ├── docs/
-│   └── screenshots/         # 高清产品展示截图
-└── Sources/
-    ├── main.swift           # 应用生命周期启动入口
-    ├── Models.swift         # 数据实体 (ContextItem, ContextSession, AppSettings)
-    ├── ContextStore.swift   # 本地数据持久化存储 (~/.contextflow/data.json)
-    ├── WindowInspector.swift# 毫秒级窗口与浏览器标签深度穿透器
-    ├── SnapshotManager.swift# 本地 Vision 神经网络离线 OCR 与微缩截图生成器
-    ├── AISummarizer.swift   # Anti-Slop 业务实体提炼、周报/日报智能总结与对话检索
-    ├── ContextEngine.swift  # 场景判定状态机 (打断过滤、挂起、多维过滤检索)
-    ├── ThemeManager.swift   # 多套专业主题状态管理器 (5套主题动态实时换肤)
-    ├── DashboardView.swift  # 全景独立大工作台 (全景时间轴、挂起看板、分类过滤)
-    ├── Restorer.swift       # 一键唤醒与现场还原执行器
-    ├── LifeLogSyncManager.swift # GitHub 私有编年史异步自动化同步器
-    ├── MenuBarManager.swift # 状态栏 NSStatusItem 与交互管理器
-    ├── PermissionsManager.swift # TCC 权限诊断与长效锁定检测
-    ├── Views.swift          # SwiftUI 现代主 Popover 界面与全景复盘弹窗 (日报/周报双模态)
-    ├── SettingsView.swift   # SwiftUI 全功能 5-Tab 配置中心 (含外观与主题)
-    ├── AppIconManager.swift # 原生应用图标高保真缓存渲染器
-    └── Logger.swift         # 本地运行日志记录器 (~/.contextflow/contextflow.log)
+│   └── screenshots/               # 全量高清界面截图 (无隐私暴露)
+├── build.sh                       # 一键编译与长效代码签名脚本
+├── Info.plist                     # macOS 应用清单与权限描述
+└── README.md                      # 项目核心说明与使用引导
 ```
 
 ---
 
-## 🔒 隐私与安全性
+## 📄 开源许可证 (License)
 
-1. **绝对本地化**：所有屏幕窗口的分析均在你的 Mac 本机执行；
-2. **0 图像上传**：快照仅在本地 `~/.contextflow/snapshots/` 保留低分辨率微缩图，绝不上传到任何服务器；
-3. **数据自主**：所有数据均以标准 JSON 格式保存在本地 `~/.contextflow/data.json`，随时可在访达中查看或一键清除；
-4. **无后门、无遥测**：项目完全开源，代码透明无任何第三方埋点统计。
-
----
-
-## 📄 开源许可证
-
-本项目基于 [MIT License](LICENSE) 开源发布，欢迎提交 Issue 与 Pull Request 共同打造更好的 macOS 工作现场守护体验！
+本项目采用 [MIT License](LICENSE) 开源许可证。
+欢迎提交 Issue 与 Pull Request 共同完善！

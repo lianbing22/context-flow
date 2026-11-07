@@ -32,12 +32,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         AppLogger.shared.log(tag: "STARTUP", message: "ContextFlow 启动完毕，静默守护运行中")
 
-        // 监听外部控制通知 (支持即时远程唤起指定窗口)
+        // 监听外部控制通知 (支持即时远程唤起指定窗口与问答)
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("app.memoryelf.open"),
             object: nil,
             queue: .main
         ) { [weak self] notif in
+            if let query = notif.userInfo?["query"] as? String {
+                DashboardWindowController.shared.showWindow(tab: "chat")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    NotificationCenter.default.post(name: NSNotification.Name("ContextFlow.AskQuestion"), object: query)
+                }
+                return
+            }
             guard let action = notif.userInfo?["action"] as? String else { return }
             self?.handleOpenAction(action)
         }
@@ -76,6 +83,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DashboardWindowController.shared.showWindow(tab: "weekly")
             case "settings":
                 SettingsWindowController.shared.showWindow()
+            case "settings-ai":
+                SettingsWindowController.shared.showWindow(tab: "ai")
+            case "settings-privacy":
+                SettingsWindowController.shared.showWindow(tab: "privacy")
+            case "settings-lifelog":
+                SettingsWindowController.shared.showWindow(tab: "lifelog")
+            case "settings-appearance":
+                SettingsWindowController.shared.showWindow(tab: "appearance")
+            case "settings-general":
+                SettingsWindowController.shared.showWindow(tab: "general")
             case "briefing":
                 BriefingWindowController.shared.showWindow()
             case "popover":

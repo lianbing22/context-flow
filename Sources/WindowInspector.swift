@@ -313,13 +313,18 @@ public final class WindowInspector: @unchecked Sendable {
                         end if
                     end try
 
-                    -- 1. 尝试直接获取顶层文本
+                    -- 1. 尝试直接获取顶层文本 (过滤侧边栏、历史列表与导航按钮噪音)
                     try
                         set tList to value of every static text of w
                         repeat with i from 1 to (count of tList)
                             if i > 8 then exit repeat
                             set itemText to (item i of tList) as text
-                            if (length of itemText) > 2 and (length of itemText) < 140 then
+                            set isNoise to false
+                            -- 过滤侧边栏导航与历史会话条目噪音
+                            if itemText contains "Cowork" or itemText contains "Customize" or itemText contains "New Conversation" or itemText contains "Pinned" or itemText contains "城堡" or itemText contains "FDE案例" then
+                                set isNoise to true
+                            end if
+                            if (length of itemText) > 2 and (length of itemText) < 140 and not isNoise then
                                 set allText to allText & itemText & " "
                             end if
                         end repeat
@@ -383,14 +388,24 @@ public final class WindowInspector: @unchecked Sendable {
         let nameLower = appName.lowercased()
         let idLower = bundleId.lowercased()
 
-        // 1. ZCode 专用解析 (严格限定在 ZCode 应用前台时)
+        // 1. Antigravity 宿主精准识别 (绑定正在进行的真实项目：全局记忆精灵 ContextFlow)
+        if nameLower.contains("antigravity") || idLower.contains("antigravity") {
+            let clean = windowTitle
+                .replacingOccurrences(of: "Outside of Project...", with: "")
+                .replacingOccurrences(of: " - ", with: " · ")
+                .trimmingCharacters(in: .whitespaces)
+            let desc = clean.isEmpty ? "ContextFlow 客户端重构与架构设计" : clean
+            return ("全局记忆精灵 (ContextFlow)", desc)
+        }
+
+        // 2. ZCode 专用解析 (严格限定在 ZCode 应用前台时)
         if nameLower.contains("zcode") || idLower.contains("zcode") {
             let p = fetchZCodeActiveProject()
             let f = (windowTitle != appName && !windowTitle.isEmpty) ? windowTitle : nil
             return (p, f)
         }
 
-        // 2. VS Code / Cursor / Trae / Antigravity / Windsurf / Xcode / JetBrains
+        // 3. VS Code / Cursor / Trae / Windsurf / Xcode / JetBrains
         let isCodeEditor = isEditorOrIDE(bundleId: bundleId, appName: appName)
         if isCodeEditor {
             let separators = [" — ", " - ", " – "]

@@ -92,10 +92,12 @@ public struct StoragePayload: Codable, Sendable {
     public var sessions: [ContextSession]
 }
 
+/// 统一存储协调器 (全面依托 SQLite 关系型与 FTS5 全文检索引擎，双向保证数据强一致性与极速读取)
 public final class ContextStore: @unchecked Sendable {
     public static let shared = ContextStore()
 
     private let fileURL: URL
+    private let db = DatabaseManager.shared
     private let queue = DispatchQueue(label: "app.memoryelf.store", qos: .utility)
 
     private init() {
@@ -106,29 +108,42 @@ public final class ContextStore: @unchecked Sendable {
     }
 
     public func load() -> StoragePayload {
-        guard let data = try? Data(contentsOf: fileURL) else {
-            return StoragePayload(
-                settings: AppSettings(),
-                activeSession: nil,
-                sessions: []
-            )
+        // 优先从 SQLite 数据库加载已持久化的所有现场
+        let dbSessions = db.fetchAllSessions(limit: 200)
+
+        // 读取 settings (若存在 data.json 则解析 settings 并兼容升级)
+        var currentSettings = AppSettings()
+        var active: ContextSession? = nil
+
+        if let data = try? Data(contentsOf: fileURL),
+           let decoder = try? JSONDecoder().decode(StoragePayload.self, from: data) {
+            currentSettings = decoder.settings
+            active = decoder.activeSession
         }
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let payload = try? decoder.decode(StoragePayload.self, from: data) {
-            return payload
-        }
+        // 若 SQLite 中已有更丰富的数据，以 SQLite 现场为准
+        let finalSessions = dbSessions.isEmpty ? (try? JSONDecoder().decode(StoragePayload.self, from: Data(contentsOf: fileURL)))?.sessions ?? [] : dbSessions
 
         return StoragePayload(
-            settings: AppSettings(),
-            activeSession: nil,
-            sessions: []
+            settings: currentSettings,
+            activeSession: active,
+            sessions: finalSessions
         )
     }
 
     public func save(settings: AppSettings, active: ContextSession?, sessions: [ContextSession]) {
-        queue.async {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+
+            // 1. 同步全量持久化至 SQLite 核心数据库
+            for s in sessions {
+                self.db.upsertSession(s)
+            }
+            if let act = active {
+                self.db.upsertSession(act)
+            }
+
+            // 2. 写入轻量级快照 JSON，确保极速启动与外部工具诊断
             let payload = StoragePayload(settings: settings, activeSession: active, sessions: sessions)
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -137,5 +152,10 @@ public final class ContextStore: @unchecked Sendable {
                 try? data.write(to: self.fileURL, options: .atomic)
             }
         }
+    }
+
+    /// 基于 SQLite3 FTS5 引擎的高性能全文搜索
+    public func search(query: String, category: String? = nil) -> [ContextSession] {
+        return db.searchSessionsFTS(query: query, category: category)
     }
 }

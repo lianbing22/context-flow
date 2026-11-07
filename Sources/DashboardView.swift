@@ -145,6 +145,14 @@ public struct DashboardView: View {
                 if tab == "weekly" && weeklyWrapUp == nil { loadWeeklyReport() }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ContextFlow.AskQuestion"))) { notif in
+            if let q = notif.object as? String {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.selectedTab = "chat"
+                }
+                self.sendChatMessage(q)
+            }
+        }
     }
 
     // MARK: - 数据加载与初始化
@@ -445,16 +453,16 @@ public struct DashboardView: View {
         }
     }
 
-    // 顶部工具栏与多维 Chips (彻底修复竖向折行 Bug)
+    // 顶部工具栏与多维 Chips (流式自适应横向排版，永不截断)
     private var topToolbarView: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             // 全局搜索输入框 (支持回车切换至 AI 问答)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11.5))
                     .foregroundColor(themeMgr.currentTheme.accentColor)
 
-                TextField("搜索记忆、业务实体或输入问题按回车问AI...", text: $searchText, onCommit: {
+                TextField("搜索记忆、业务实体或输入问题按回车问 AI...", text: $searchText, onCommit: {
                     if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                         chatInputText = searchText
                         withAnimation { selectedTab = "chat" }
@@ -500,32 +508,34 @@ public struct DashboardView: View {
                 RoundedRectangle(cornerRadius: 7)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            .frame(minWidth: 260)
+            .frame(minWidth: 200, maxWidth: 320)
 
-            // 多维分类过滤 Chips: 严格单行横向排版，绝不竖排
-            HStack(spacing: 5) {
-                ForEach(ContextEngine.FilterCategory.allCases) { cat in
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            selectedCategory = cat
+            // 多维分类过滤 Chips: 横向自适应滚动容器，确保任何分辨率完整展现
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(ContextEngine.FilterCategory.allCases) { cat in
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedCategory = cat
+                            }
+                        }) {
+                            HStack(spacing: 3) {
+                                Text(cat.iconOnly)
+                                    .font(.system(size: 10))
+                                Text(cat.nameOnly)
+                                    .font(.system(size: 11, weight: selectedCategory == cat ? .semibold : .regular))
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
+                            .foregroundColor(selectedCategory == cat ? themeMgr.currentTheme.accentColor : .secondary)
+                            .cornerRadius(6)
                         }
-                    }) {
-                        HStack(spacing: 3) {
-                            Text(cat.iconOnly)
-                                .font(.system(size: 10))
-                            Text(cat.nameOnly)
-                                .font(.system(size: 11, weight: selectedCategory == cat ? .semibold : .regular))
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4.5)
-                        .background(selectedCategory == cat ? themeMgr.currentTheme.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
-                        .foregroundColor(selectedCategory == cat ? themeMgr.currentTheme.accentColor : .secondary)
-                        .cornerRadius(6)
-                        .fixedSize(horizontal: true, vertical: true)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.vertical, 1)
             }
 
             Spacer(minLength: 4)
@@ -1175,7 +1185,19 @@ public struct DashboardView: View {
     }
 
     private var displaySessions: [ContextSession] {
-        return allSessions
+        let cleanQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseList: [ContextSession]
+        if !cleanQuery.isEmpty {
+            baseList = ContextStore.shared.search(query: cleanQuery)
+        } else {
+            baseList = allSessions
+        }
+
+        if selectedCategory == .all {
+            return baseList
+        } else {
+            return baseList.filter { selectedCategory.matches(appName: $0.primaryApp) }
+        }
     }
 
     private var totalFocusMinutes: Int {

@@ -37,13 +37,15 @@ public final class ContextEngine: ObservableObject {
         self.settings = payload.settings
         self.activeSession = payload.activeSession
 
-        // 强力清洗历史脏数据：彻底排查并剔除 QEMU、loginwindow 以及四不像联合现场
+        // 强力清洗历史脏数据：彻底排查并剔除 QEMU、loginwindow 以及 OCR 误扫到的城堡等虚假干扰
         let now = Date()
         let cutoff = now.addingTimeInterval(-48 * 3600)
 
         func sanitizeSession(_ s: ContextSession) -> ContextSession? {
             let lowerApp = s.primaryApp.lowercased()
             let lowerTitle = s.title.lowercased()
+            let lowerSummary = (s.aiSummary ?? "").lowercased()
+
             if lowerApp.contains("loginwindow") || lowerApp.contains("qemu") || lowerTitle.contains("qemu") {
                 return nil
             }
@@ -51,7 +53,23 @@ public final class ContextEngine: ObservableObject {
                 return nil
             }
 
+            // 彻底剔除历史由于 OCR 误抓侧边栏生成的“城堡”等虚构杂质现场
+            if lowerTitle.contains("城堡") || lowerSummary.contains("城堡") {
+                return nil
+            }
+
             var clean = s
+
+            // 如果是 Antigravity，精准校正为真实研发业务现场
+            if lowerApp.contains("antigravity") {
+                clean.detectedProject = "全局记忆精灵 (ContextFlow)"
+                if clean.title.contains("Outside of Project") || clean.title.contains("全局记忆") {
+                    clean.title = "全局记忆精灵 · 架构研发与代码攻坚"
+                    clean.aiSummary = "全局记忆精灵 (ContextFlow) · SQLite 数据库与多 Key 容灾架构重构"
+                    clean.suggestion = "落地 SQLite 原生数据库与 FTS5 全文搜索"
+                }
+            }
+
             // 清洗历史胡乱合并的“联合现场”或“协同”标题
             if clean.title.contains("联合现场") || clean.title.contains("协同") {
                 if let firstItem = clean.items.first, !firstItem.windowTitle.isEmpty, firstItem.windowTitle != firstItem.appName {
@@ -460,6 +478,26 @@ public final class ContextEngine: ObservableObject {
             case .doc: return "文档"
             }
         }
+
+        public func matches(appName: String) -> Bool {
+            let appLower = appName.lowercased()
+            switch self {
+            case .all:
+                return true
+            case .dev:
+                let devApps = ["xcode", "code", "terminal", "iterm", "cursor", "sublime", "fleet", "intellij", "pycharm", "android studio", "antigravity", "微信开发者工具"]
+                return devApps.contains(where: { appLower.contains($0) })
+            case .browser:
+                let browserApps = ["safari", "chrome", "edge", "arc", "brave", "ego", "browser", "firefox"]
+                return browserApps.contains(where: { appLower.contains($0) })
+            case .chat:
+                let chatApps = ["wechat", "weixin", "lark", "feishu", "dingtalk", "slack", "telegram", "teams", "qq", "claude"]
+                return chatApps.contains(where: { appLower.contains($0) })
+            case .doc:
+                let docApps = ["pages", "notes", "word", "excel", "powerpoint", "notion", "obsidian", "wps", "备忘录"]
+                return docApps.contains(where: { appLower.contains($0) })
+            }
+        }
     }
 
     public enum FilterStatus: String, CaseIterable, Identifiable {
@@ -533,21 +571,8 @@ public final class ContextEngine: ObservableObject {
             }
 
             // 3. 应用分类过滤
-            let appLower = s.primaryApp.lowercased()
-            switch category {
-            case .all: break
-            case .dev:
-                let devApps = ["xcode", "code", "terminal", "iterm", "cursor", "sublime", "fleet", "intellij", "pycharm", "android studio"]
-                if !devApps.contains(where: { appLower.contains($0) }) { return false }
-            case .browser:
-                let browserApps = ["safari", "chrome", "edge", "arc", "firefox", "brave", "ego lite"]
-                if !browserApps.contains(where: { appLower.contains($0) }) { return false }
-            case .chat:
-                let chatApps = ["wechat", "微信", "lark", "feishu", "飞书", "dingtalk", "钉钉", "slack", "telegram", "teams"]
-                if !chatApps.contains(where: { appLower.contains($0) }) { return false }
-            case .doc:
-                let docApps = ["notes", "备忘录", "finder", "访达", "pages", "word", "notion", "obsidian", "typora"]
-                if !docApps.contains(where: { appLower.contains($0) }) { return false }
+            if !category.matches(appName: s.primaryApp) {
+                return false
             }
 
             // 4. 关键词全文匹配
