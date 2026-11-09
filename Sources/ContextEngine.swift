@@ -17,6 +17,13 @@ public final class ContextEngine: ObservableObject {
     private var transientStartTime: Date?
     private var transientAppBundleId: String?
     private var isSystemLocked: Bool = false
+    private var currentWindowId: CGWindowID? = nil
+
+    /// 测量系统键鼠硬件级无操作空闲时长 (P1: 解决虚增专注时间问题)
+    private func getSystemIdleSeconds() -> Double {
+        let idle = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0) ?? .null)
+        return idle
+    }
 
     /// 意图提炼后台补偿队列锁与重试记录
     private var isProcessingSummaryQueue: Bool = false
@@ -37,50 +44,27 @@ public final class ContextEngine: ObservableObject {
         self.settings = payload.settings
         self.activeSession = payload.activeSession
 
-        // 强力清洗历史脏数据：彻底排查并剔除 QEMU、loginwindow 以及 OCR 误扫到的城堡等虚假干扰
+        // 强力清洗历史脏数据：彻底排查并剔除 QEMU、loginwindow 以及 OCR 误扫到的虚假干扰
         let now = Date()
         let cutoff = now.addingTimeInterval(-48 * 3600)
 
         func sanitizeSession(_ s: ContextSession) -> ContextSession? {
             let lowerApp = s.primaryApp.lowercased()
             let lowerTitle = s.title.lowercased()
-            let lowerSummary = (s.aiSummary ?? "").lowercased()
 
             if lowerApp.contains("loginwindow") || lowerApp.contains("qemu") || lowerTitle.contains("qemu") {
-                return nil
-            }
-            if s.lastActiveAt < cutoff {
-                return nil
-            }
-
-            // 彻底剔除历史由于 OCR 误抓侧边栏生成的“城堡”等虚构杂质现场
-            if lowerTitle.contains("城堡") || lowerSummary.contains("城堡") {
                 return nil
             }
 
             var clean = s
 
-            // 如果是 Antigravity，精准校正为真实研发业务现场
-            if lowerApp.contains("antigravity") {
-                clean.detectedProject = "全局记忆精灵 (ContextFlow)"
-                if clean.title.contains("Outside of Project") || clean.title.contains("全局记忆") {
-                    clean.title = "全局记忆精灵 · 架构研发与代码攻坚"
-                    clean.aiSummary = "全局记忆精灵 (ContextFlow) · SQLite 数据库与多 Key 容灾架构重构"
-                    clean.suggestion = "落地 SQLite 原生数据库与 FTS5 全文搜索"
-                }
+            // P1 长期记忆完整保留：超过48小时未活跃的挂起会话降级为归档状态，但绝不物理抹除，保证时间轴与记忆问答完整无缺
+            if clean.lastActiveAt < cutoff && clean.status == .suspended {
+                clean.status = .archived
             }
 
-            // 清洗历史胡乱合并的“联合现场”或“协同”标题
-            if clean.title.contains("联合现场") || clean.title.contains("协同") {
-                if let firstItem = clean.items.first, !firstItem.windowTitle.isEmpty, firstItem.windowTitle != firstItem.appName {
-                    clean.title = firstItem.windowTitle
-                } else {
-                    clean.title = "\(clean.primaryApp) 业务现场"
-                }
-            }
-
-            // 清洗包含套话的 aiSummary
-            if let ai = clean.aiSummary, ai.contains("使用") || ai.contains("助手") || ai.contains("相关任务") || ai.contains("整理文档") {
+            // 清洗历史遗留的套话 aiSummary
+            if let ai = clean.aiSummary, ai.contains("使用") && (ai.contains("助手") || ai.contains("相关任务") || ai.contains("整理文档")) {
                 clean.aiSummary = nil
                 clean.suggestion = nil
             }
@@ -92,7 +76,7 @@ public final class ContextEngine: ObservableObject {
             .filter { $0.status == .suspended }
             .compactMap { sanitizeSession($0) }
         self.completedSessions = payload.sessions
-            .filter { $0.status == .completed }
+            .filter { $0.status == .completed || $0.status == .archived }
             .compactMap { sanitizeSession($0) }
 
         if let act = payload.activeSession, let sanitizedAct = sanitizeSession(act) {
@@ -170,11 +154,20 @@ public final class ContextEngine: ObservableObject {
             }
         }
 
-        // 3. 更新当前活跃 Session 计时
+        // 3. 记录当前窗口 ID
+        self.currentWindowId = info.windowId
+
+        // 4. 更新当前活跃 Session 计时 (P1: 严格键鼠硬件空闲检测，防止虚增工时)
         if var current = activeSession {
             let now = Date()
             current.lastActiveAt = now
-            current.totalActiveSeconds += 5
+
+            let idleSeconds = getSystemIdleSeconds()
+            if idleSeconds < 60.0 {
+                current.totalActiveSeconds += 5
+            } else {
+                AppLogger.shared.log(tag: "IDLE_PAUSE", message: "系统空闲 \(Int(idleSeconds)) 秒 (超过 60s 阈值)，专注计时暂停累加")
+            }
 
             let item = ContextItem(
                 appName: info.appName,
@@ -275,8 +268,13 @@ public final class ContextEngine: ObservableObject {
                 suspended.status = .suspended
                 suspended.lastActiveAt = now
 
-                // 离开瞬间截取微缩快照与原生神经 OCR
-                let (snapPath, ocrText) = SnapshotManager.shared.captureSnapshotWithOCR(sessionId: suspended.id)
+                // 离开瞬间截取单窗口微缩快照与原生神经 OCR (P0-03: 单窗口安全隔离，杜绝时序错配)
+                let (snapPath, ocrText) = SnapshotManager.shared.captureWindowSnapshotWithOCR(
+                    sessionId: suspended.id,
+                    windowId: self.currentWindowId,
+                    appName: suspended.primaryApp,
+                    bundleId: suspended.items.first?.bundleId
+                )
                 if let p = snapPath { suspended.thumbnailPath = p }
                 if let ocr = ocrText, !ocr.isEmpty {
                     if !suspended.items.isEmpty {
@@ -705,7 +703,12 @@ public final class ContextEngine: ObservableObject {
         act.status = .suspended
         act.lastActiveAt = Date()
 
-        let (snapPath, ocrText) = SnapshotManager.shared.captureSnapshotWithOCR(sessionId: act.id)
+        let (snapPath, ocrText) = SnapshotManager.shared.captureWindowSnapshotWithOCR(
+            sessionId: act.id,
+            windowId: self.currentWindowId,
+            appName: act.primaryApp,
+            bundleId: act.items.first?.bundleId
+        )
         if let snapPath = snapPath {
             act.thumbnailPath = snapPath
         }

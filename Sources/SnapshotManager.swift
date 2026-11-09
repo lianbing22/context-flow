@@ -1,7 +1,9 @@
 import Foundation
 import Cocoa
 import Vision
+import CoreGraphics
 
+/// 毫秒级单窗口微缩快照与离线视觉神经引擎 (杜绝全屏截取、杜绝时序张冠李戴、严格遵循设置开关)
 public final class SnapshotManager: @unchecked Sendable {
     public static let shared = SnapshotManager()
 
@@ -13,53 +15,89 @@ public final class SnapshotManager: @unchecked Sendable {
         try? FileManager.default.createDirectory(at: snapshotFolder, withIntermediateDirectories: true)
     }
 
-    /// 离开瞬间为当前前台视窗抓取微缩快照，并使用 macOS 本地 Vision 神经引擎毫秒级提取核心屏幕视觉文字 (0 隐私泄露、0 云端上传)
-    public func captureSnapshotWithOCR(sessionId: UUID) -> (path: String?, ocrText: String?) {
-        let targetFile = snapshotFolder.appendingPathComponent("\(sessionId.uuidString).jpg")
-        let tempRaw = FileManager.default.temporaryDirectory.appendingPathComponent("cf_raw_\(UUID().uuidString).png")
-
-        // 1. 调用 macOS 原生静默全屏/视窗抓取 (无声、不弹窗)
-        let captureTask = Process()
-        captureTask.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        captureTask.arguments = ["-x", "-m", tempRaw.path] // -x 静音, -m 主显示器
-        try? captureTask.run()
-        captureTask.waitUntilExit()
-
-        guard FileManager.default.fileExists(atPath: tempRaw.path) else {
+    /// 单窗口原生安全抓取 + macOS 原生 Apple Neural Engine 离线 OCR (P0-03 严格修复)
+    /// - Parameters:
+    ///   - sessionId: 会话 ID
+    ///   - windowId: 离开瞬间的特定窗口 ID (若窗口已销毁或最小化，严禁全屏盲抓)
+    ///   - appName: 应用名 (用于隐私黑名单验证)
+    ///   - bundleId: Bundle ID
+    public func captureWindowSnapshotWithOCR(
+        sessionId: UUID,
+        windowId: CGWindowID? = nil,
+        appName: String? = nil,
+        bundleId: String? = nil
+    ) -> (path: String?, ocrText: String?) {
+        // 1. 严格检查设置中的截图开关 (P0-03)
+        let settings = ContextStore.shared.load().settings
+        guard settings.enableThumbnails else {
+            AppLogger.shared.log(tag: "SNAPSHOT", message: "用户已关闭屏幕快照采集 (enableThumbnails=false)，跳过截图与 OCR。")
             return (nil, nil)
         }
 
-        // 2. 本地 Vision.framework 原生毫秒级离线 OCR 识别 (提取真实视窗大字与核心业务实体)
-        var extractedOCRText: String? = nil
-        if let img = NSImage(contentsOfFile: tempRaw.path),
-           let cgImage = img.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-            extractedOCRText = performLocalVisionOCR(cgImage: cgImage)
+        // 2. 严格检查系统敏感授权窗口与用户隐私黑名单
+        if let bId = bundleId, WindowInspector.shared.isSystemOrSecurityProcess(bundleId: bId, appName: appName ?? "") {
+            AppLogger.shared.log(tag: "SNAPSHOT", message: "命中系统级安全或隐私应用 [\(bId)]，已彻底阻断截屏。")
+            return (nil, nil)
         }
 
-        // 3. 使用 macOS 内置 sips 压制为宽度 360px、质量 75 的超轻量缩略图
-        let sipsTask = Process()
-        sipsTask.executableURL = URL(fileURLWithPath: "/usr/bin/sips")
-        sipsTask.arguments = ["-s", "format", "jpeg", "-s", "formatOptions", "75", "-Z", "360", tempRaw.path, "--out", targetFile.path]
-        try? sipsTask.run()
-        sipsTask.waitUntilExit()
+        if let name = appName {
+            let nameLower = name.lowercased()
+            for ignored in settings.customIgnoredApps {
+                let ig = ignored.trimmingCharacters(in: .whitespaces).lowercased()
+                if !ig.isEmpty && nameLower.contains(ig) {
+                    AppLogger.shared.log(tag: "SNAPSHOT", message: "命中自定义隐私黑名单 [\(name)]，已彻底阻断截屏。")
+                    return (nil, nil)
+                }
+            }
+        }
 
-        // 清理临时生图
-        try? FileManager.default.removeItem(at: tempRaw)
+        // 3. 必须通过 CGWindowID 精准捕获单个目标窗口，绝不全屏盲抓 (P0-03: 杜绝新前台应用画面错配给旧会话)
+        guard let wid = windowId, wid > 0 else {
+            AppLogger.shared.log(tag: "SNAPSHOT", message: "未获取到有效目标窗口 ID，拒绝全屏盲抓以保护隐私。")
+            return (nil, nil)
+        }
+
+        // 调用 CoreGraphics 高速内存抓取单窗口（无子进程开销、非阻塞、无声音、不弹窗）
+        guard let cgImage = CGWindowListCreateImage(
+            .null,
+            .optionIncludingWindow,
+            wid,
+            [.bestResolution, .boundsIgnoreFraming]
+        ) else {
+            AppLogger.shared.log(tag: "SNAPSHOT", message: "目标窗口 (ID: \(wid)) 已关闭或不可见，安全跳过截图。")
+            return (nil, nil)
+        }
+
+        // 验证图像尺寸有效性（过滤极小或全透明空白窗口）
+        guard cgImage.width > 50 && cgImage.height > 50 else {
+            return (nil, nil)
+        }
+
+        // 4. 使用本地 Apple Neural Engine (Vision.framework) 执行离线 OCR
+        let extractedOCRText = performLocalVisionOCR(cgImage: cgImage)
+
+        // 5. 将单窗口微缩图转为 JPEG 并保存 (内存中纯 Swift 原生压制，无外部命令行依赖)
+        let targetFile = snapshotFolder.appendingPathComponent("\(sessionId.uuidString).jpg")
+        let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+        if let jpegData = bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.72]) {
+            try? jpegData.write(to: targetFile)
+        }
 
         let savedPath = FileManager.default.fileExists(atPath: targetFile.path) ? targetFile.path : nil
         if savedPath != nil {
-            AppLogger.shared.log(tag: "SNAPSHOT", message: "离开瞬间快照生成成功: \(targetFile.lastPathComponent)")
-        }
-        if let ocr = extractedOCRText, !ocr.isEmpty {
-            AppLogger.shared.log(tag: "VISION_OCR", message: "✨ Vision 视觉引擎毫秒级穿透屏幕核心文本: [\(ocr.prefix(45))...]")
+            AppLogger.shared.log(tag: "SNAPSHOT", message: "单窗口离开快照已安全保存: \(targetFile.lastPathComponent)")
         }
 
         return (savedPath, extractedOCRText)
     }
 
-    /// 兼容旧接口
+    /// 兼容旧调用接口 (内部委托单窗口安全引擎)
+    public func captureSnapshotWithOCR(sessionId: UUID) -> (path: String?, ocrText: String?) {
+        return captureWindowSnapshotWithOCR(sessionId: sessionId, windowId: nil, appName: nil, bundleId: nil)
+    }
+
     public func captureSnapshot(sessionId: UUID) -> String? {
-        return captureSnapshotWithOCR(sessionId: sessionId).path
+        return captureWindowSnapshotWithOCR(sessionId: sessionId).path
     }
 
     /// 使用 macOS 本地系统原生神经引擎 (Apple Neural Engine / Vision.framework) 进行离线 OCR

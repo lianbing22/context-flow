@@ -93,7 +93,8 @@ public final class AISummarizer: @unchecked Sendable {
         建议: <15字以内，下一步行动具体指引>
         """
 
-        let userPrompt = "当前工作现场捕获信息：\n" + contextLines.joined(separator: "\n")
+        let rawUserPrompt = "当前工作现场捕获信息：\n" + contextLines.joined(separator: "\n")
+        let userPrompt = sanitizeSensitiveInfo(rawUserPrompt)
 
         executeChatWithFailover(
             baseURL: settings.aiBaseURL,
@@ -203,29 +204,11 @@ public final class AISummarizer: @unchecked Sendable {
         return SummaryResult(summary: entity, suggestion: sug)
     }
 
-    /// 全局记忆问答 (具备严格真实性与防幻觉屏障)
+    /// 全局记忆问答 (基于严格真实证据检索，绝无任何硬编码或事实伪造)
     public func askMemory(question: String, recentSessions: [ContextSession], completion: @escaping @Sendable (String) -> Void) {
         let settings = ContextStore.shared.load().settings
         let keys = settings.apiKeys
-
-        let qLower = question.lowercased()
-        let isAskingAntigravity = qLower.contains("反重力") || qLower.contains("antigravity")
-
-        // 1. Antigravity 宿主事实锁定屏障 (绝对杜绝任何侧边栏噪音引发的城堡/导游宝等怪异幻觉)
-        if isAskingAntigravity {
-            let reply = """
-            在 Antigravity (反重力) 环境中，您今天核心推进了【全局记忆精灵 (ContextFlow)】macOS 客户端的系统级重构与工程化落地：
-
-            1. 核心数据库引擎：全面落地 SQLite3 工业级嵌入式数据库（支持 WAL 高并发读写模式与 FTS5 全文检索引擎）；
-            2. 高可用密钥池：实现多 API Key 智能轮换与超时故障转移机制 (Failover)，保障意图提炼不中断；
-            3. 视窗感知与防幻觉：针对开发环境重构 Accessibility 探查链，过滤侧边栏噪音并精准识别当前工程现场；
-            4. ContextFlow 全景工作台：构建宽屏自适应工作台、日报复盘看板与本周周报编年史。
-
-            目前代码已完成工程化重构，核心测试通过，数据均已持久化至本地 SQLite。
-            """
-            completion(reply.trimmingCharacters(in: .whitespacesAndNewlines))
-            return
-        }
+        let qLower = question.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
         var memoryLines: [String] = []
         let dateFormatter = DateFormatter()
@@ -234,46 +217,62 @@ public final class AISummarizer: @unchecked Sendable {
         let now = Date()
         let cutoff = now.addingTimeInterval(-24 * 3600)
 
+        // 仅保留 24 小时内的有效用户操作现场
         let filtered = recentSessions.filter { s in
             let lower = s.primaryApp.lowercased() + " " + s.title.lowercased()
             return s.lastActiveAt >= cutoff && !lower.contains("qemu") && !lower.contains("loginwindow")
         }
 
-        for (i, s) in filtered.prefix(12).enumerated() {
+        for (i, s) in filtered.prefix(15).enumerated() {
             let timeStr = dateFormatter.string(from: s.lastActiveAt)
             let intent = s.aiSummary ?? s.title
-            let proj = s.detectedProject.map { " [项目:\($0)]" } ?? ""
+            let proj = s.detectedProject.map { " [工程/项目:\($0)]" } ?? ""
             let mins = max(1, s.totalActiveSeconds / 60)
             memoryLines.append("\(i+1). [\(timeStr)] 应用:\(s.primaryApp)\(proj) - 业务现场: \(intent) (耗时\(mins)分钟)")
         }
 
-        // 离线无 Key 模式下的自然语义回答
+        // 离线无 Key 模式下的基于真实足迹的客观检索 (零硬编码虚构)
         if keys.isEmpty && settings.aiProvider != "ollama" {
-            if qLower.contains("微信") || qLower.contains("开发者工具") {
-                let wxSessions = filtered.filter { $0.primaryApp.contains("微信") || $0.title.contains("commodity") || ($0.detectedProject?.contains("commodity") ?? false) }
-                if !wxSessions.isEmpty {
-                    completion("您今天在【微信开发者工具】中主要推进了 commodity-ledger-mini 小程序项目的开发与调试，现场状态已完好记录。")
-                    return
+            // 分词匹配用户问题中的实体关键词
+            let searchTerms = qLower.components(separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+                .filter { $0.count >= 2 }
+
+            let matchedSessions = filtered.filter { s in
+                let fullText = "\(s.primaryApp) \(s.title) \(s.detectedProject ?? "") \(s.items.map { $0.windowTitle }.joined(separator: " "))".lowercased()
+                if searchTerms.isEmpty {
+                    return true
                 }
+                return searchTerms.contains { term in fullText.contains(term) }
             }
-            if qLower.contains("耗时") || qLower.contains("时间") || qLower.contains("花费") {
-                let totalSecs = filtered.reduce(0) { $0 + $1.totalActiveSeconds }
-                let totalMins = max(1, totalSecs / 60)
-                completion("今天系统累计记录到专注工作时间约 \(totalMins) 分钟，涵盖 \(filtered.prefix(3).map { $0.primaryApp }.joined(separator: "、")) 等 \(filtered.count) 个工作现场。可在设置中配置 API Key 解锁深度自然语义对话。")
+
+            if matchedSessions.isEmpty {
+                let count = filtered.count
+                completion("在今日记录的 \(count) 个活动现场中，未检索到关于「\(question)」的直接事实证据。\n\n(提示：系统严格依据真实视窗与代码足迹回答，不捏造不存在的任务。可在设置中配置 API Key 解锁深度大模型跨期语义推理。)")
                 return
             }
-            let count = filtered.count
-            completion("今天记录了 \(count) 个关键业务现场（包括 \(filtered.prefix(3).map { $0.title }.joined(separator: "、")) 等）。可在设置中配置 Agnes AI / DeepSeek / 智谱等 API Key 解锁深度自然语言问答。")
+
+            var resultLines: [String] = []
+            for s in matchedSessions.prefix(4) {
+                let mins = max(1, s.totalActiveSeconds / 60)
+                let proj = s.detectedProject.map { " [项目:\($0)]" } ?? ""
+                resultLines.append("• 【\(s.primaryApp)】\(proj) 现场：\(s.title)（专注约 \(mins) 分钟）")
+            }
+
+            let totalSecs = matchedSessions.reduce(0) { $0 + $1.totalActiveSeconds }
+            let totalMins = max(1, totalSecs / 60)
+
+            completion("基于今日真实足迹，检索到以下相关活动记录（累计专注约 \(totalMins) 分钟）：\n\n" + resultLines.joined(separator: "\n") + "\n\n(当前为端侧离线事实检索 · 可在偏好设置配置 API Key 解锁云端大模型综合推理)")
             return
         }
 
         let systemPrompt = """
-        你是用户的 macOS 全局数字记忆助手。以下是用户今天在电脑前的真实工作足迹记录。
-        请根据真实记忆简短、精准、客观、友好地回答用户的问题。
+        你是一个客观、严谨、以事实为准绳的 macOS 个人工作与数字记忆助手。
+        用户正在查询他今天在电脑前的真实工作足迹记录。
         【防幻觉与真实性铁律】：
-        1. 严格依据提供的真实足迹记录回答，绝不无中生有，绝不捏造任何怪异虚假任务。
-        2. 如果用户问到 Antigravity (反重力)，用户唯一在推进的项目是【全局记忆精灵 (ContextFlow)】macOS 客户端的开源架构设计、多 Key 容灾轮换池建设与本地 SQLite 数据库重构！绝对严禁把任何开发环境侧边栏扫描到的历史条目捏造成在反重力里做的事！
-        3. 回答尽量客观、聚焦于真实业务进展，控制在150字以内。
+        1. 你的回答必须 100% 严格基于下方提供的【今天的工作足迹历史】。
+        2. 绝对严禁编造任何未在记录中出现过的任务、项目名称、代码逻辑或业务成果。
+        3. 如果用户询问某个特定应用、项目或关键词，但在记录中找不到相关证据，必须如实回答：“在今日记录的足迹中，未检索到关于【xxx】的相关活动证据”。
+        4. 客观陈述用户在各个应用或窗口的停留时长、真实打开的窗口标题与文件路径。语言简短干练、直击事实，字数控制在 150 字以内。
         """
 
         let userPrompt = "用户提问：\(question)\n\n今天的工作足迹历史：\n" + memoryLines.joined(separator: "\n")
@@ -844,3 +843,27 @@ final class KeyTestCollector: @unchecked Sendable {
         return results
     }
 }
+
+extension AISummarizer {
+    /// 敏感信息智能脱敏过滤：保护 API Key、私钥、Bearer Token 与密码不被上传云端 (P0-04)
+    private func sanitizeSensitiveInfo(_ text: String) -> String {
+        var result = text
+        let keyPatterns = [
+            #"(?i)(?:api[_-]?key|secret|token|password|passwd|authorization)[\s:=]+["']?([a-zA-Z0-9_\-\.]{12,})["']?"#,
+            #"sk-[a-zA-Z0-9]{20,}"#,
+            #"ghp_[a-zA-Z0-9]{20,}"#,
+            #"Bearer\s+[a-zA-Z0-9_\-\.]{20,}"#
+        ]
+        for pattern in keyPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                result = regex.stringByReplacingMatches(
+                    in: result,
+                    range: NSRange(location: 0, length: result.utf16.count),
+                    withTemplate: "[PROTECTED_CREDENTIAL]"
+                )
+            }
+        }
+        return result
+    }
+}
+

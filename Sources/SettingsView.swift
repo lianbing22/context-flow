@@ -62,10 +62,10 @@ public struct SettingsView: View {
     @State private var currentTab: String = "ai" // ai, privacy, lifelog, appearance, general
 
     // MARK: - AI 配置状态
-    @State private var selectedProvider: String = "agnes"
-    @State private var aiBaseURL: String = "https://api.agnes-ai.cn/v1"
+    @State private var selectedProvider: String = "deepseek"
+    @State private var aiBaseURL: String = "https://api.deepseek.com/v1"
     @State private var aiApiKey: String = ""
-    @State private var aiModel: String = "agnes-3.0-flash"
+    @State private var aiModel: String = "deepseek-chat"
     @State private var enableKeyRotation: Bool = true
     @State private var showApiKey: Bool = false
     @State private var isTestingConnection: Bool = false
@@ -75,7 +75,7 @@ public struct SettingsView: View {
 
     // MARK: - 自适应模型与客户端探查状态
     @State private var isScanningLocalModels: Bool = false
-    @State private var detectionReport: DetectionReport? = nil
+    @State private var detectionReport: HarnessDetectionReport? = nil
     @State private var adoptSuccessText: String? = nil
 
     // MARK: - 外观与主题状态
@@ -101,7 +101,9 @@ public struct SettingsView: View {
     @State private var isAXGranted: Bool = PermissionsManager.shared.isAccessibilityGranted()
     @State private var isSCGranted: Bool = PermissionsManager.shared.isScreenCaptureGranted()
 
-    public init() {}
+    public init(initialTab: String = "ai") {
+        self._currentTab = State(initialValue: initialTab)
+    }
 
     private var parsedKeys: [String] {
         let raw = aiApiKey
@@ -218,7 +220,7 @@ public struct SettingsView: View {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
-                Text("全局记忆精灵 · 数据均本地化存储在 ~/.contextflow")
+                Text("全局记忆精灵 · 数据均安全落盘在本地 ~/.contextflow")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -250,21 +252,19 @@ public struct SettingsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    // MARK: - Tab 1: AI 记忆引擎 (DeepSeek Harness 插件化架构 + 本地模型/软件配置一键装配)
+    // MARK: - Tab 1: AI 记忆引擎
     private var aiTabContent: some View {
         VStack(spacing: 14) {
-            // 卡片 0: DeepSeek Harness 插件化模型与授权中心
+            // 卡片 0: 模型与插件中心
             cardContainer(
                 title: "🔌 插件化模型与授权中心 (DeepSeek Harness 架构)",
-                badge: isScanningLocalModels ? "并发探测中..." : (detectionReport != nil ? "已就绪 \(detectionReport!.plugins.count) 个适配插件" : "一切皆插件 · 零配置装配")
+                badge: isScanningLocalModels ? "并发探测中..." : (detectionReport != nil ? "已就绪 \(detectionReport!.plugins.count) 个适配插件" : "自适应识别 · 一键装配")
             ) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("借鉴 DeepSeek Harness 插件架构，自适应识别本地离线模型、IDE 软件配置与主流大模型开放平台。")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
+                        Text("自适应识别本机运行的本地离线模型、IDE 软件凭证以及云端模型开放平台。")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
 
                         Spacer()
 
@@ -301,10 +301,8 @@ public struct SettingsView: View {
                         .cornerRadius(6)
                     }
 
-                    // 插件列表回显
                     if let rep = detectionReport {
-                        VStack(alignment: .leading, spacing: 10) {
-                            // 1. 本地离线与 IDE 插件列表
+                        VStack(alignment: .leading, spacing: 8) {
                             ForEach(rep.plugins) { plugin in
                                 HStack(spacing: 8) {
                                     ZStack {
@@ -337,7 +335,6 @@ public struct SettingsView: View {
 
                                     Spacer()
 
-                                    // 操作按钮组
                                     HStack(spacing: 6) {
                                         if let pUrl = plugin.portalURL, let u = URL(string: pUrl) {
                                             Button(action: {
@@ -355,7 +352,6 @@ public struct SettingsView: View {
                                                 .cornerRadius(4)
                                             }
                                             .buttonStyle(.plain)
-                                            .help("打开该服务商控制台获取或校验 API Key")
                                         }
 
                                         Button(action: {
@@ -379,276 +375,168 @@ public struct SettingsView: View {
                                 .background(Color(NSColor.controlBackgroundColor).opacity(0.55))
                                 .cornerRadius(7)
                             }
-
-                            // 2. 本地已识别的开发软件
-                            if !rep.installedApps.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("已识别联动的开发软件与生态：")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(.secondary)
-
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 6) {
-                                            ForEach(rep.installedApps) { app in
-                                                HStack(spacing: 4) {
-                                                    Circle().fill(app.isRunning ? Color.green : Color.secondary.opacity(0.4)).frame(width: 5, height: 5)
-                                                    Image(systemName: app.iconName).font(.system(size: 9))
-                                                    Text(app.name).font(.system(size: 10.5))
-                                                    if app.hasConfigImportable {
-                                                        Text("可同步").font(.system(size: 8, weight: .bold)).foregroundColor(.blue)
-                                                    }
-                                                }
-                                                .padding(.horizontal, 7)
-                                                .padding(.vertical, 3.5)
-                                                .background(Color.primary.opacity(0.05))
-                                                .cornerRadius(5)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
-                        .padding(10)
-                        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-                        .cornerRadius(8)
                     }
                 }
             }
 
-            // 卡片 1: 服务商预设
-            cardContainer(title: "服务商快捷预设 (自带密钥 BYOK)", badge: "兼容 OpenAI 标准协议") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 12) {
-                        Text("快捷预设：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 90, alignment: .trailing)
-
+            // 卡片 1: 服务商预设与参数
+            cardContainer(title: "模型服务商与 API 连接配置", badge: "兼容 OpenAI 协议") {
+                VStack(alignment: .leading, spacing: 12) {
+                    // 服务商快捷选择行
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("预设服务商")
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text("快速载入推荐的网关地址与主流大模型")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
                         Picker("", selection: $selectedProvider) {
-                            Text("DeepSeek (官方深度思考 · 推荐)").tag("deepseek")
-                            Text("Agnes AI (官方高速 / 智能负载均衡)").tag("agnes")
-                            Text("智谱 GLM-4-Flash (超高性价比)").tag("zhipu")
-                            Text("通义千问 (DashScope 百炼)").tag("qwen")
-                            Text("月之暗面 Kimi (超长文本)").tag("kimi")
+                            Text("DeepSeek (深度求索 · 推荐)").tag("deepseek")
+                            Text("Agnes AI (高速智能网关)").tag("agnes")
+                            Text("智谱 GLM-4-Flash").tag("zhipu")
+                            Text("通义千问 (DashScope)").tag("qwen")
+                            Text("月之暗面 Kimi").tag("kimi")
                             Text("OpenAI (官方 GPT-4o)").tag("openai")
                             Text("Ollama (本地离线大模型)").tag("ollama")
                             Text("自定义兼容中转 (Custom)").tag("custom")
                         }
                         .labelsHidden()
+                        .frame(width: 220)
                         .onChange(of: selectedProvider) { _, provider in
                             applyProviderPreset(provider)
                         }
                     }
 
-                    Text("支持任意遵循 OpenAI 标准协议的接口服务，包括 DeepSeek、Agnes、智谱、通义千问、Kimi 或本地离线模型。")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 102)
-                }
-            }
+                    Divider().opacity(0.3)
 
-            // 卡片 2: API 连接参数
-            cardContainer(title: "API 连接参数", badge: nil) {
-                VStack(spacing: 10) {
-                    HStack(spacing: 12) {
-                        Text("Base URL：")
+                    // Base URL 通栏输入
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("API 接口网关 (Base URL)")
                             .font(.system(size: 12, weight: .medium))
-                            .frame(width: 90, alignment: .trailing)
-                        TextField("例如 https://api.deepseek.com/v1", text: $aiBaseURL)
+                        TextField("https://api.deepseek.com/v1", text: $aiBaseURL)
                             .textFieldStyle(.roundedBorder)
                     }
 
-                    HStack(spacing: 12) {
-                        Text("Model Name：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 90, alignment: .trailing)
-                        TextField("例如 deepseek-chat 或 agnes-3.0-flash", text: $aiModel)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                }
-            }
-
-            // 卡片 3: 高可用 API Key 密钥池 (Key Pool)
-            cardContainer(
-                title: "高可用 API Key 密钥池 (Key Pool)",
-                badge: parsedKeys.count > 1 ? "智能轮换已激活 (\(parsedKeys.count) 密钥)" : (parsedKeys.count == 1 ? "单密钥就绪" : "未配置密钥 · 离线模式")
-            ) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("API 密钥：")
+                    // API Key 通栏安全输入 (Keychain 加密保护)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("API 访问密钥 (API Key)")
                                 .font(.system(size: 12, weight: .medium))
-                            Button(action: {
-                                showApiKey.toggle()
-                            }) {
-                                HStack(spacing: 2) {
-                                    Image(systemName: showApiKey ? "eye.slash" : "eye")
-                                    Text(showApiKey ? "密文" : "明文")
-                                }
+                            Image(systemName: "key.fill")
                                 .font(.system(size: 10))
-                                .foregroundColor(themeMgr.currentTheme.accentColor)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .frame(width: 90, alignment: .trailing)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            if showApiKey {
-                                TextEditor(text: $aiApiKey)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .frame(height: 52)
-                                    .padding(4)
-                                    .background(Color(NSColor.textBackgroundColor))
-                                    .cornerRadius(6)
-                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
-                            } else {
-                                SecureField("粘贴您的 API Key，支持多行或逗号录入多个 Key 组建容灾池", text: $aiApiKey)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-
-                            Text("支持输入 1 个 Key，也可多行/逗号输入多个 Key 组建容灾轮换池。")
-                                .font(.system(size: 10.5))
+                                .foregroundColor(.green)
+                            Text("macOS Keychain 硬件级保护")
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-                        }
-                    }
-
-                    // 智能轮换开关
-                    HStack(spacing: 12) {
-                        Spacer().frame(width: 90)
-                        Toggle(isOn: $enableKeyRotation) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("多 Key 智能轮换与超时自动故障转移 (Failover)")
-                                    .font(.system(size: 11.5, weight: .medium))
-                                Text("意图提炼与问答时按顺序轮换；遇到 429 限流或网络超时无缝转移至备用 Key。")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
+                            Spacer()
+                            Button(showApiKey ? "隐藏密钥" : "显示密钥") {
+                                showApiKey.toggle()
                             }
+                            .font(.system(size: 10.5))
+                            .buttonStyle(.plain)
+                            .foregroundColor(themeMgr.currentTheme.accentColor)
                         }
-                        .toggleStyle(.switch)
+
+                        if showApiKey {
+                            TextEditor(text: $aiApiKey)
+                                .font(.system(size: 11.5, design: .monospaced))
+                                .frame(height: 52)
+                                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.primary.opacity(0.12), lineWidth: 1))
+                        } else {
+                            SecureField("sk-xxxxxxxxxxxxxxxxxxxxxxxx", text: $aiApiKey)
+                                .textFieldStyle(.roundedBorder)
+                        }
+
+                        Text("支持多 Key 轮询（以换行或逗号分隔），密钥已由系统钥匙串隔离，绝不随配置文件明文落盘。")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
                     }
 
-                    // 连通性测试与结果
-                    HStack(spacing: 12) {
-                        Spacer().frame(width: 90)
+                    // Model Name 通栏输入
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("指定推理模型名称 (Model)")
+                            .font(.system(size: 12, weight: .medium))
+                        TextField("deepseek-chat", text: $aiModel)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    Divider().opacity(0.3)
+
+                    // 连通性测试与多密钥轮询
+                    HStack {
+                        Toggle("启用多 Key 故障转移轮询", isOn: $enableKeyRotation)
+                            .font(.system(size: 11.5))
+
+                        Spacer()
+
                         Button(action: {
                             testAIConnection()
                         }) {
                             HStack(spacing: 4) {
                                 if isTestingConnection {
                                     ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
-                                    Text("正在测试...")
+                                    Text("测试连接中...")
                                 } else {
-                                    Image(systemName: "antenna.radiowaves.left.and.right")
+                                    Image(systemName: "network")
                                     Text("测试连通性")
                                 }
                             }
-                            .font(.system(size: 11))
+                            .font(.system(size: 11, weight: .medium))
                         }
-                        .disabled(parsedKeys.isEmpty || isTestingConnection)
+                        .controlSize(.regular)
+                        .disabled(isTestingConnection || parsedKeys.isEmpty)
+                    }
 
-                        if let res = testResultText {
-                            Text(res)
-                                .font(.system(size: 11))
-                                .foregroundColor(isTestSuccess ? .green : .red)
+                    if let result = testResultText {
+                        HStack(spacing: 4) {
+                            Image(systemName: isTestSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundColor(isTestSuccess ? .green : .orange)
+                            Text(result)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(isTestSuccess ? .green : .orange)
                         }
+                        .padding(6)
+                        .background(isTestSuccess ? Color.green.opacity(0.08) : Color.orange.opacity(0.08))
+                        .cornerRadius(5)
                     }
                 }
             }
-
-            // 卡片 4: 开箱即用离线保障
-            HStack(spacing: 10) {
-                Image(systemName: "cpu.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(themeMgr.currentTheme.accentColor)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("端侧离线神经引擎保障")
-                        .font(.system(size: 11.5, weight: .semibold))
-                    Text("若暂不填写 API Key 或网络离线，全局记忆精灵将自动启用 Apple Neural Engine 本地视觉与实体离线引擎，完全断网可用。")
-                        .font(.system(size: 10.5))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.04))
-            .cornerRadius(8)
         }
-    }
-
-    // MARK: - 触发 DeepSeek Harness 插件与模型探查
-    private func triggerScanLocalModels() {
-        isScanningLocalModels = true
-        adoptSuccessText = nil
-        ModelPluginHarness.shared.scanAll { report in
-            Task { @MainActor in
-                self.isScanningLocalModels = false
-                self.detectionReport = report
-            }
-        }
-    }
-
-    private func pluginColor(for cat: ModelPluginCategory) -> Color {
-        switch cat {
-        case .localRuntime: return .green
-        case .ideSoftware: return .purple
-        case .cloudProvider: return .blue
-        }
-    }
-
-    private func pluginIcon(for cat: ModelPluginCategory) -> String {
-        switch cat {
-        case .localRuntime: return "desktopcomputer"
-        case .ideSoftware: return "chevron.left.forwardslash.chevron.right"
-        case .cloudProvider: return "cloud.fill"
-        }
-    }
-
-    private func adoptDiscoveredPlugin(_ plugin: ModelServicePlugin) {
-        self.selectedProvider = plugin.provider
-        self.aiBaseURL = plugin.baseURL
-        if let first = plugin.models.first {
-            self.aiModel = first
-        }
-        if let k = plugin.detectedKey, !k.isEmpty && !k.contains("-local") && k != "ollama" {
-            if self.aiApiKey.isEmpty {
-                self.aiApiKey = k
-            } else if !self.aiApiKey.contains(k) {
-                self.aiApiKey += "\n" + k
-            }
-        }
-        saveAllSettings()
-        withAnimation {
-            adoptSuccessText = "已成功装配 [\(plugin.name)]，配置已即时生效并写入设置！"
-        }
-    }
-
-    private func adoptDiscoveredService(_ service: DiscoveredModelService) {
-        adoptDiscoveredPlugin(service)
     }
 
     // MARK: - Tab 2: 隐私与忽略黑名单
     private var privacyTabContent: some View {
         VStack(spacing: 14) {
-            cardContainer(title: "隐私保护原则", badge: "本地计算 · 零上云") {
+            cardContainer(title: "隐私保护安全承诺", badge: "本地计算 · 零截图上云") {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .top, spacing: 6) {
                         Text("•").foregroundColor(themeMgr.currentTheme.accentColor)
-                        Text("0 截图云端上传：离开瞬间的微缩视窗快照与 OCR 均在 Apple 神经引擎离线计算。")
+                        Text("视窗快照与 OCR 均在 Apple 神经引擎离线计算，图像文件绝不上传云端。")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                     HStack(alignment: .top, spacing: 6) {
                         Text("•").foregroundColor(themeMgr.currentTheme.accentColor)
-                        Text("敏感信息免打扰：系统级密码管理器、安全鉴权弹窗已默认永久绝不嗅探。")
+                        Text("系统密码管理器、安全鉴权弹窗以及锁屏已被底层永久阻断，绝不嗅探。")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    HStack(alignment: .top, spacing: 6) {
+                        Text("•").foregroundColor(themeMgr.currentTheme.accentColor)
+                        Text("向云端提炼发送前，系统已自动对 API Key、Token 和密码等敏感凭据执行正则脱敏。")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
                 }
             }
 
-            cardContainer(title: "已忽略的应用名单 (不记录、不挂起)", badge: "\(ignoredApps.count) 个已拦截") {
+            cardContainer(title: "已忽略的应用黑名单 (不记录、不挂起、不截图)", badge: "\(ignoredApps.count) 个已拦截") {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
-                        TextField("输入应用名或 BundleId (如 1Password)", text: $newIgnoredAppName)
+                        TextField("输入应用名称或 BundleId (如 1Password, Telegram)", text: $newIgnoredAppName)
                             .textFieldStyle(.roundedBorder)
 
                         Button("添加") {
@@ -690,79 +578,120 @@ public struct SettingsView: View {
         }
     }
 
-    // MARK: - Tab 3: 数字编年史与 GitHub 归档
+    // MARK: - Tab 3: 数字编年史与 GitHub 归档 (彻底修复排版，绝不反人类)
     private var lifelogTabContent: some View {
         VStack(spacing: 14) {
             cardContainer(title: "GitHub 私有编年史同步", badge: enableGitHubSync ? "自动同步中" : "未开启") {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 12) {
-                        Text("自动同步：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 100, alignment: .trailing)
-
-                        Toggle("启用 GitHub 私有归档自动同步", isOn: $enableGitHubSync)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("GitHub 仓库：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 100, alignment: .trailing)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextField("格式：用户名/仓库名 (如 yourname/my-lifelog)", text: $gitHubRepo)
-                                .textFieldStyle(.roundedBorder)
-                                .disabled(!enableGitHubSync)
-
-                            Text("推荐在 GitHub 上创建 Private（私有）仓库，并将本机 SSH Key 或 PAT 添加至账户，实现每日静默无感备份。")
+                    // 1. 自动同步 Switch 开关行
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("启用 GitHub 私有归档自动同步")
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text("开启后将本地每日工作记录与数据库静默归档至您的 GitHub 私有仓库")
                                 .font(.system(size: 10.5))
                                 .foregroundColor(.secondary)
-                                .lineSpacing(2)
                         }
+                        Spacer()
+                        Toggle("", isOn: $enableGitHubSync)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
                     }
 
-                    HStack(spacing: 12) {
-                        Text("同步周期：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 100, alignment: .trailing)
+                    Divider().opacity(0.3)
 
+                    // 2. 仓库输入框 (通栏布局，彻底杜绝文字散开与错位)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("GitHub 仓库地址")
+                                .font(.system(size: 12, weight: .medium))
+                            Spacer()
+                            Text("格式：用户名/仓库名 (如 yourname/my-lifelog)")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary)
+                        }
+
+                        TextField("yourname/my-lifelog 或 git@github.com:yourname/my-lifelog.git", text: $gitHubRepo)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(!enableGitHubSync)
+
+                        Text("推荐在 GitHub 上创建 Private（私有）仓库，并将本机 SSH Key 或 PAT 添加至账户，实现每日静默无感备份。")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+
+                    Divider().opacity(0.3)
+
+                    // 3. 周期选择行 (左侧说明，右侧菜单)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("自动提交同步周期")
+                                .font(.system(size: 12, weight: .medium))
+                            Text("后台静默提交与推送到远端仓库的时间间隔")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
                         Picker("", selection: $syncIntervalHours) {
                             Text("每 1 小时自动提交").tag(1)
                             Text("每 2 小时自动提交 (推荐)").tag(2)
                             Text("每 4 小时自动提交").tag(4)
                         }
                         .labelsHidden()
+                        .frame(width: 180)
                         .disabled(!enableGitHubSync)
                     }
 
-                    HStack(spacing: 12) {
-                        Spacer().frame(width: 100)
+                    Divider().opacity(0.3)
 
-                        Button("立即测试推送") {
+                    // 4. 测试与同步操作行
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("手动验证与推送")
+                                .font(.system(size: 12, weight: .medium))
+                            if let msg = lifelog.syncMessage {
+                                Text(msg)
+                                    .font(.system(size: 10.5))
+                                    .foregroundColor(lifelog.isSyncing ? .blue : .secondary)
+                            } else {
+                                Text("立即触发一次本地 Markdown 导出与 Git 远端推送测试")
+                                    .font(.system(size: 10.5))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        Button(action: {
                             saveAllSettings()
                             lifelog.triggerSync(isManual: true)
+                        }) {
+                            if lifelog.isSyncing {
+                                HStack(spacing: 4) {
+                                    ProgressView().scaleEffect(0.6).frame(width: 14, height: 14)
+                                    Text("同步中...")
+                                }
+                            } else {
+                                Text("立即测试推送")
+                            }
                         }
                         .controlSize(.regular)
-                        .disabled(!enableGitHubSync || gitHubRepo.isEmpty)
-
-                        if let msg = lifelog.syncMessage {
-                            Text(msg)
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
+                        .disabled(!enableGitHubSync || gitHubRepo.isEmpty || lifelog.isSyncing)
                     }
                 }
             }
 
-            cardContainer(title: "本地归档目录", badge: nil) {
-                HStack(spacing: 12) {
-                    Text("存储路径：")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 100, alignment: .trailing)
-
-                    Text("~/.contextflow/lifelog-repo")
-                        .font(.system(size: 11.5, design: .monospaced))
-                        .foregroundColor(.primary)
+            // 本地目录卡片
+            cardContainer(title: "本地工作编年史目录", badge: nil) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("本地存储绝对路径")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("~/.contextflow/lifelog-repo")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
 
                     Spacer()
 
@@ -776,7 +705,7 @@ public struct SettingsView: View {
         }
     }
 
-    // MARK: - Tab 4: 外观、个性主题与语言设定
+    // MARK: - Tab 4: 外观与个性主题
     private var appearanceTabContent: some View {
         VStack(spacing: 14) {
             // 语言设置
@@ -800,7 +729,7 @@ public struct SettingsView: View {
 
             cardContainer(title: "视觉质感与主题配色", badge: "5 套精调色彩") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("选择适合您工作习惯的主题风格。切换立即生效于全景大工作台与菜单栏小窗口。")
+                    Text("选择适合您工作习惯的主题风格。切换立即生效于全景工作台与状态栏窗口。")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .padding(.bottom, 4)
@@ -881,9 +810,9 @@ public struct SettingsView: View {
 
                     HStack {
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("屏幕快照与本地视觉 (Vision)")
+                            Text("屏幕录制权限 (Screen Recording)")
                                 .font(.system(size: 12, weight: .medium))
-                            Text("仅在离开瞬间保存微缩快照与离线大字实体提炼，永不云端上传")
+                            Text("用于离开瞬间的单窗口微缩快照与离线大字视觉提炼，永不上云")
                                 .font(.system(size: 10.5))
                                 .foregroundColor(.secondary)
                         }
@@ -900,87 +829,88 @@ public struct SettingsView: View {
                 }
             }
 
-            cardContainer(title: "感知参数调节", badge: nil) {
+            cardContainer(title: "感知捕获行为偏好", badge: nil) {
                 VStack(spacing: 12) {
-                    HStack(spacing: 12) {
-                        Text("微打断宽限：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 90, alignment: .trailing)
-
-                        Slider(value: $transientThreshold, in: 10...120, step: 5)
-
-                        Text("\(Int(transientThreshold)) 秒")
-                            .font(.system(size: 11, design: .monospaced))
-                            .frame(width: 45, alignment: .trailing)
+                    // 屏幕快照开关
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("视窗微缩快照与本地视觉 OCR")
+                                .font(.system(size: 12, weight: .medium))
+                            Text("关闭后彻底禁用任何屏幕快照与 Vision OCR，仅通过纯文本轨迹记录现场")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $enableThumbnails)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
                     }
 
-                    HStack(spacing: 12) {
-                        Text("常驻现场上限：")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 90, alignment: .trailing)
+                    Divider().opacity(0.3)
 
-                        Slider(value: $maxSuspended, in: 3...15, step: 1)
-
-                        Text("\(Int(maxSuspended)) 个")
-                            .font(.system(size: 11, design: .monospaced))
-                            .frame(width: 45, alignment: .trailing)
-                    }
-
-                    HStack(spacing: 12) {
-                        Spacer().frame(width: 90)
-                        Toggle("离开瞬间保存视窗微缩图", isOn: $enableThumbnails)
-                            .font(.system(size: 11.5))
+                    // 瞬态应用过滤阈值
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("瞬态应用过滤宽限期")
+                                .font(.system(size: 12, weight: .medium))
+                            Text("切入微信、飞书、音乐等应用小于设定秒数时不打断当前主工作现场")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Slider(value: $transientThreshold, in: 10...90, step: 5)
+                                .frame(width: 120)
+                            Text("\(Int(transientThreshold)) 秒")
+                                .font(.system(size: 11, design: .monospaced))
+                                .frame(width: 40, alignment: .trailing)
+                        }
                     }
                 }
             }
 
-            cardContainer(title: "本地 SQLite 数据库与数据维护", badge: "SQLite3 + FTS5") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
-                        Button("打开数据目录 (~/.contextflow)") {
-                            let path = (FileManager.default.homeDirectoryForCurrentUser.path as NSString).appendingPathComponent(".contextflow")
-                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
-                        }
-                        .controlSize(.regular)
-
-                        Button("重新提炼所有现场") {
-                            isRefreshingAll = true
-                            engine.reSummarizeAllSuspendedSessions { count in
-                                isRefreshingAll = false
-                                refreshAlertText = "已完成 \(count) 个现场重提炼"
-                            }
-                        }
-                        .controlSize(.regular)
-                        .disabled(isRefreshingAll)
-
-                        if let alert = refreshAlertText {
-                            Text(alert)
-                                .font(.system(size: 11))
-                                .foregroundColor(.green)
-                        }
+            cardContainer(title: "数据与维护管理", badge: nil) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("清空本地全部历史现场与缓存")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("抹除 SQLite 中的所有历史记录与截图缩略图，配置保留")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(.secondary)
                     }
 
-                    Text("当前会话与时序流水已持久化至本地 SQLite3 WAL 数据库与 FTS5 全文索引。")
-                        .font(.system(size: 10.5))
-                        .foregroundColor(.secondary)
+                    Spacer()
+
+                    Button("清空全部数据") {
+                        DatabaseManager.shared.clearAllData()
+                        engine.completedSessions.removeAll()
+                        engine.suspendedSessions.removeAll()
+                        engine.activeSession = nil
+                        engine.persistState()
+                    }
+                    .controlSize(.regular)
                 }
             }
         }
     }
 
-    // MARK: - 通用卡片容器
-    private func cardContainer<Content: View>(title: String, badge: String?, @ViewBuilder content: () -> Content) -> some View {
+    // MARK: - 辅助卡片容器 (标准现代 macOS 卡片样式)
+    private func cardContainer<Content: View>(
+        title: String,
+        badge: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(title)
-                    .font(.system(size: 12.5, weight: .bold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
 
                 Spacer()
 
                 if let b = badge {
                     Text(b)
-                        .font(.system(size: 10.5))
+                        .font(.system(size: 10))
                         .foregroundColor(themeMgr.currentTheme.accentColor)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2.5)
@@ -989,7 +919,7 @@ public struct SettingsView: View {
                 }
             }
 
-            Divider().opacity(0.3)
+            Divider().opacity(0.25)
 
             content()
         }
@@ -1050,6 +980,7 @@ public struct SettingsView: View {
         engine.settings = s
         engine.persistState()
         themeMgr.applyTheme(selectedTheme)
+        lifelog.restartAutoSyncTimer()
         AppLogger.shared.log(tag: "SETTINGS", message: "全局配置与主题 [\(selectedTheme.displayName)] 已保存更新！")
     }
 
@@ -1078,21 +1009,24 @@ public struct SettingsView: View {
 
     private func applyProviderPreset(_ provider: String) {
         switch provider {
-        case "agnes":
-            aiBaseURL = "https://api.agnes-ai.cn/v1"
-            aiModel = "agnes-3.0-flash"
         case "deepseek":
             aiBaseURL = "https://api.deepseek.com/v1"
             aiModel = "deepseek-chat"
+        case "agnes":
+            aiBaseURL = "https://api.agnes-ai.cn/v1"
+            aiModel = "agnes-3.0-flash"
         case "zhipu":
             aiBaseURL = "https://open.bigmodel.cn/api/paas/v4"
             aiModel = "glm-4-flash"
         case "openai":
             aiBaseURL = "https://api.openai.com/v1"
             aiModel = "gpt-4o-mini"
-        case "siliconflow":
-            aiBaseURL = "https://api.siliconflow.cn/v1"
-            aiModel = "Qwen/Qwen2.5-7B-Instruct"
+        case "qwen":
+            aiBaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+            aiModel = "qwen-plus"
+        case "kimi":
+            aiBaseURL = "https://api.moonshot.cn/v1"
+            aiModel = "moonshot-v1-8k"
         case "ollama":
             aiBaseURL = "http://localhost:11434/v1"
             aiModel = "qwen2.5:7b"
@@ -1130,6 +1064,53 @@ public struct SettingsView: View {
                     self.testResultText = "⚠️ 有 \(failedCount) 个通道连接失败"
                 }
             }
+        }
+    }
+
+    private func triggerScanLocalModels() {
+        isScanningLocalModels = true
+        adoptSuccessText = nil
+
+        ModelPluginHarness.shared.scanAll { report in
+            DispatchQueue.main.async {
+                self.isScanningLocalModels = false
+                self.detectionReport = report
+            }
+        }
+    }
+
+    private func pluginColor(for cat: ModelPluginCategory) -> Color {
+        switch cat {
+        case .localRuntime: return .purple
+        case .ideSoftware: return .blue
+        case .cloudProvider: return .green
+        }
+    }
+
+    private func pluginIcon(for cat: ModelPluginCategory) -> String {
+        switch cat {
+        case .localRuntime: return "cpu"
+        case .ideSoftware: return "chevron.left.forwardslash.chevron.right"
+        case .cloudProvider: return "cloud.fill"
+        }
+    }
+
+    private func adoptDiscoveredPlugin(_ plugin: ModelServicePlugin) {
+        self.selectedProvider = plugin.provider
+        self.aiBaseURL = plugin.baseURL
+        if let first = plugin.models.first {
+            self.aiModel = first
+        }
+        if let k = plugin.detectedKey, !k.isEmpty && !k.contains("-local") && k != "ollama" {
+            if self.aiApiKey.isEmpty {
+                self.aiApiKey = k
+            } else if !self.aiApiKey.contains(k) {
+                self.aiApiKey += "\n" + k
+            }
+        }
+        saveAllSettings()
+        withAnimation {
+            adoptSuccessText = "已成功装配 [\(plugin.name)]，配置已即时生效并写入设置！"
         }
     }
 }

@@ -9,6 +9,7 @@ public struct RawWindowInfo: Sendable {
     public let filePath: String?
     public let project: String?
     public let extractedText: String?
+    public let windowId: CGWindowID?
 }
 
 public final class WindowInspector: @unchecked Sendable {
@@ -89,10 +90,12 @@ public final class WindowInspector: @unchecked Sendable {
             return nil
         }
 
-        // 1. 基础标题嗅探：利用 CoreGraphics 毫秒级原生获取非隐藏窗口标题
+        // 1. 基础标题嗅探：利用 CoreGraphics 毫秒级原生获取非隐藏窗口标题与 windowId
         var windowTitle: String = appName
+        var frontWindowId: CGWindowID? = nil
         if let cgWin = fetchWindowInfoViaCoreGraphics(pid: pid), !cgWin.title.isEmpty {
             windowTitle = cgWin.title
+            frontWindowId = cgWin.windowId
         } else if let axTitle = fetchFrontAppWindowTitle(pid: pid, processName: appName), !axTitle.isEmpty {
             windowTitle = axTitle
         }
@@ -144,12 +147,13 @@ public final class WindowInspector: @unchecked Sendable {
             url: pageUrl,
             filePath: filePath,
             project: project,
-            extractedText: extractedText
+            extractedText: extractedText,
+            windowId: frontWindowId
         )
     }
 
-    /// 毫秒级原生从 CoreGraphics 窗口栈抓取指定 PID 的最上层真实在屏窗口标题
-    public func fetchWindowInfoViaCoreGraphics(pid: pid_t) -> (title: String, ownerName: String)? {
+    /// 毫秒级原生从 CoreGraphics 窗口栈抓取指定 PID 的最上层真实在屏窗口标题与 windowId
+    public func fetchWindowInfoViaCoreGraphics(pid: pid_t) -> (title: String, ownerName: String, windowId: CGWindowID?)? {
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
         guard let infoList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
             return nil
@@ -163,6 +167,7 @@ public final class WindowInspector: @unchecked Sendable {
             let layer = info[kCGWindowLayer as String] as? Int ?? -1
             let owner = info[kCGWindowOwnerName as String] as? String ?? ""
             let name = (info[kCGWindowName as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let winId = (info[kCGWindowNumber as String] as? NSNumber).map { CGWindowID($0.uint32Value) }
 
             let bounds = info[kCGWindowBounds as String] as? [String: Any] ?? [:]
             let w = bounds["Width"] as? Double ?? 0
@@ -170,7 +175,7 @@ public final class WindowInspector: @unchecked Sendable {
 
             // 过滤极小辅助气泡或无意义纯空窗口
             if layer == 0 && w > 80 && h > 80 && !name.isEmpty && name != owner {
-                return (title: name, ownerName: owner)
+                return (title: name, ownerName: owner, windowId: winId)
             }
         }
 
@@ -180,8 +185,9 @@ public final class WindowInspector: @unchecked Sendable {
                   ownerPid == Int(pid) else { continue }
             let owner = info[kCGWindowOwnerName as String] as? String ?? ""
             let name = (info[kCGWindowName as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let winId = (info[kCGWindowNumber as String] as? NSNumber).map { CGWindowID($0.uint32Value) }
             if !name.isEmpty {
-                return (title: name, ownerName: owner)
+                return (title: name, ownerName: owner, windowId: winId)
             }
         }
 
@@ -388,14 +394,25 @@ public final class WindowInspector: @unchecked Sendable {
         let nameLower = appName.lowercased()
         let idLower = bundleId.lowercased()
 
-        // 1. Antigravity 宿主精准识别 (绑定正在进行的真实项目：全局记忆精灵 ContextFlow)
+        // 1. Antigravity 宿主原生解析 (基于真实窗口标题与工作区提取工程，绝不硬编码虚构项目)
         if nameLower.contains("antigravity") || idLower.contains("antigravity") {
             let clean = windowTitle
                 .replacingOccurrences(of: "Outside of Project...", with: "")
-                .replacingOccurrences(of: " - ", with: " · ")
                 .trimmingCharacters(in: .whitespaces)
-            let desc = clean.isEmpty ? "ContextFlow 客户端重构与架构设计" : clean
-            return ("全局记忆精灵 (ContextFlow)", desc)
+
+            // 解析常见格式："file.swift — ProjectName" 或 "ProjectName"
+            let separators = [" — ", " - ", " – "]
+            for sep in separators {
+                if clean.contains(sep) {
+                    let parts = clean.components(separatedBy: sep)
+                    if parts.count >= 2 {
+                        let project = parts.last?.trimmingCharacters(in: .whitespaces)
+                        let file = parts.dropLast().joined(separator: sep).trimmingCharacters(in: .whitespaces)
+                        return (project?.isEmpty == false ? project : nil, file.isEmpty ? clean : file)
+                    }
+                }
+            }
+            return (nil, clean.isEmpty ? windowTitle : clean)
         }
 
         // 2. ZCode 专用解析 (严格限定在 ZCode 应用前台时)

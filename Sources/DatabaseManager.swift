@@ -6,7 +6,7 @@ public final class DatabaseManager: @unchecked Sendable {
     public static let shared = DatabaseManager()
 
     private var db: OpaquePointer?
-    private let dbQueue = DispatchQueue(label: "app.memoryelf.database", qos: .userInitiated)
+    private let dbQueue = DispatchQueue(label: "app.contextflow.database", qos: .userInitiated)
     private let dbPath: String
 
     private init() {
@@ -18,6 +18,7 @@ public final class DatabaseManager: @unchecked Sendable {
 
         openDatabase()
         createTables()
+        migrateDatabaseIfNeeded()
         optimizeDatabase()
     }
 
@@ -57,10 +58,10 @@ public final class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    // MARK: - 数据表结构构建 (结构化事件流 + 会话 + 全文索引 + 复盘)
+    // MARK: - 数据表结构构建与平滑迁移
 
     private func createTables() {
-        // 1. 工作现场核心表 (sessions)
+        // 1. 工作现场核心表 (sessions) - 包含 user_note
         let createSessionsSQL = """
         CREATE TABLE IF NOT EXISTS context_sessions (
             id TEXT PRIMARY KEY,
@@ -74,7 +75,8 @@ public final class DatabaseManager: @unchecked Sendable {
             total_active_seconds INTEGER DEFAULT 0,
             thumbnail_path TEXT,
             created_at REAL NOT NULL,
-            last_active_at REAL NOT NULL
+            last_active_at REAL NOT NULL,
+            user_note TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_sessions_last_active ON context_sessions(last_active_at DESC);
         CREATE INDEX IF NOT EXISTS idx_sessions_status ON context_sessions(status);
@@ -82,7 +84,7 @@ public final class DatabaseManager: @unchecked Sendable {
         """
         executeRaw(sql: createSessionsSQL)
 
-        // 2. 细粒度物理窗口轨迹足迹表 (timeline_events)
+        // 2. 细粒度物理窗口轨迹足迹表 (timeline_events) - 包含 project
         let createEventsSQL = """
         CREATE TABLE IF NOT EXISTS timeline_events (
             id TEXT PRIMARY KEY,
@@ -94,6 +96,7 @@ public final class DatabaseManager: @unchecked Sendable {
             file_path TEXT,
             extracted_text TEXT,
             captured_at REAL NOT NULL,
+            project TEXT,
             FOREIGN KEY(session_id) REFERENCES context_sessions(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_events_session_id ON timeline_events(session_id);
@@ -139,6 +142,36 @@ public final class DatabaseManager: @unchecked Sendable {
         executeRaw(sql: createSettingsSQL)
     }
 
+    /// 自动检测并升级已有数据库表，防止用户备注与项目字段因版本迭代遗漏 (P0-05)
+    private func migrateDatabaseIfNeeded() {
+        let sessionColumns = getTableColumns(tableName: "context_sessions")
+        if !sessionColumns.contains("user_note") {
+            AppLogger.shared.log(tag: "SQLITE_MIGRATION", message: "context_sessions 表增加 user_note 字段...")
+            executeRaw(sql: "ALTER TABLE context_sessions ADD COLUMN user_note TEXT;")
+        }
+
+        let eventColumns = getTableColumns(tableName: "timeline_events")
+        if !eventColumns.contains("project") {
+            AppLogger.shared.log(tag: "SQLITE_MIGRATION", message: "timeline_events 表增加 project 字段...")
+            executeRaw(sql: "ALTER TABLE timeline_events ADD COLUMN project TEXT;")
+        }
+    }
+
+    private func getTableColumns(tableName: String) -> Set<String> {
+        var columns = Set<String>()
+        let sql = "PRAGMA table_info(\(tableName));"
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                if let nameC = sqlite3_column_text(stmt, 1) {
+                    columns.insert(String(cString: nameC))
+                }
+            }
+            sqlite3_finalize(stmt)
+        }
+        return columns
+    }
+
     // MARK: - 会话 (ContextSession) 数据持久化操作
 
     public func upsertSession(_ s: ContextSession) {
@@ -146,8 +179,8 @@ public final class DatabaseManager: @unchecked Sendable {
             let sql = """
             INSERT INTO context_sessions (
                 id, title, primary_app, bundle_id, detected_project, ai_summary,
-                suggestion, status, total_active_seconds, thumbnail_path, created_at, last_active_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                suggestion, status, total_active_seconds, thumbnail_path, created_at, last_active_at, user_note
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 primary_app = excluded.primary_app,
@@ -158,7 +191,8 @@ public final class DatabaseManager: @unchecked Sendable {
                 status = excluded.status,
                 total_active_seconds = excluded.total_active_seconds,
                 thumbnail_path = excluded.thumbnail_path,
-                last_active_at = excluded.last_active_at;
+                last_active_at = excluded.last_active_at,
+                user_note = excluded.user_note;
             """
 
             var stmt: OpaquePointer?
@@ -202,6 +236,12 @@ public final class DatabaseManager: @unchecked Sendable {
                 sqlite3_bind_double(stmt, 11, s.createdAt.timeIntervalSince1970)
                 sqlite3_bind_double(stmt, 12, s.lastActiveAt.timeIntervalSince1970)
 
+                if let note = s.userNote {
+                    sqlite3_bind_text(stmt, 13, (note as NSString).utf8String, -1, nil)
+                } else {
+                    sqlite3_bind_null(stmt, 13)
+                }
+
                 sqlite3_step(stmt)
                 sqlite3_finalize(stmt)
 
@@ -219,8 +259,8 @@ public final class DatabaseManager: @unchecked Sendable {
     public func insertEvent(item: ContextItem, sessionId: UUID) {
         let sql = """
         INSERT OR REPLACE INTO timeline_events (
-            id, session_id, app_name, bundle_id, window_title, url, file_path, extracted_text, captured_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            id, session_id, app_name, bundle_id, window_title, url, file_path, extracted_text, captured_at, project
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
@@ -250,6 +290,12 @@ public final class DatabaseManager: @unchecked Sendable {
 
             sqlite3_bind_double(stmt, 9, item.capturedAt.timeIntervalSince1970)
 
+            if let p = item.project {
+                sqlite3_bind_text(stmt, 10, (p as NSString).utf8String, -1, nil)
+            } else {
+                sqlite3_bind_null(stmt, 10)
+            }
+
             sqlite3_step(stmt)
             sqlite3_finalize(stmt)
         }
@@ -272,7 +318,10 @@ public final class DatabaseManager: @unchecked Sendable {
         """
         var insStmt: OpaquePointer?
         if sqlite3_prepare_v2(db, insSQL, -1, &insStmt, nil) == SQLITE_OK {
-            let combinedText = s.items.compactMap { $0.extractedText }.joined(separator: " ")
+            var combinedText = s.items.compactMap { $0.extractedText }.joined(separator: " ")
+            if let note = s.userNote, !note.isEmpty {
+                combinedText += " " + note
+            }
             let combinedTitles = s.items.map { $0.windowTitle }.joined(separator: " ")
 
             sqlite3_bind_text(insStmt, 1, (s.id.uuidString as NSString).utf8String, -1, nil)
@@ -287,24 +336,28 @@ public final class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    // MARK: - 查询接口 (支持毫秒级 SQL & FTS5 全文搜索)
+    // MARK: - 查询接口 (内部非锁调用 + 外部加锁，彻底杜绝重入死锁)
+
+    private func internalFetchAllSessions(limit: Int = 100) -> [ContextSession] {
+        let sql = "SELECT * FROM context_sessions ORDER BY last_active_at DESC LIMIT ?;"
+        var stmt: OpaquePointer?
+        var list: [ContextSession] = []
+
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            sqlite3_bind_int(stmt, 1, Int32(limit))
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                if let s = parseSession(from: stmt) {
+                    list.append(s)
+                }
+            }
+            sqlite3_finalize(stmt)
+        }
+        return list
+    }
 
     public func fetchAllSessions(limit: Int = 100) -> [ContextSession] {
         dbQueue.sync {
-            let sql = "SELECT * FROM context_sessions ORDER BY last_active_at DESC LIMIT ?;"
-            var stmt: OpaquePointer?
-            var list: [ContextSession] = []
-
-            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_int(stmt, 1, Int32(limit))
-                while sqlite3_step(stmt) == SQLITE_ROW {
-                    if let s = parseSession(from: stmt) {
-                        list.append(s)
-                    }
-                }
-                sqlite3_finalize(stmt)
-            }
-            return list
+            internalFetchAllSessions(limit: limit)
         }
     }
 
@@ -326,14 +379,19 @@ public final class DatabaseManager: @unchecked Sendable {
         }
     }
 
+    /// 高效全文检索 + LIKE 模糊智能联合搜索 (杜绝队列死锁，完美支持中英文无障碍匹配)
     public func searchSessionsFTS(query: String, category: String? = nil, limit: Int = 50) -> [ContextSession] {
         dbQueue.sync {
             let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if cleanQuery.isEmpty {
-                return fetchAllSessions(limit: limit)
+                // 直接调用内部方法，避免重入 dbQueue.sync 导致死锁 (P1)
+                return internalFetchAllSessions(limit: limit)
             }
 
-            // 使用 FTS5 全文匹配
+            var list: [ContextSession] = []
+            var matchedIds = Set<UUID>()
+
+            // 1. FTS5 全文搜索
             let ftsSQL = """
             SELECT DISTINCT s.* FROM context_sessions s
             JOIN fts_timeline f ON s.id = f.session_id
@@ -342,26 +400,30 @@ public final class DatabaseManager: @unchecked Sendable {
             """
 
             var stmt: OpaquePointer?
-            var list: [ContextSession] = []
-
             if sqlite3_prepare_v2(db, ftsSQL, -1, &stmt, nil) == SQLITE_OK {
-                let matchArg = "\"\(cleanQuery)*\""
+                // 安全转义 match 参数
+                let escaped = cleanQuery.replacingOccurrences(of: "\"", with: "\"\"")
+                let matchArg = "\"*\(escaped)*\""
                 sqlite3_bind_text(stmt, 1, (matchArg as NSString).utf8String, -1, nil)
                 sqlite3_bind_int(stmt, 2, Int32(limit))
 
                 while sqlite3_step(stmt) == SQLITE_ROW {
                     if let s = parseSession(from: stmt) {
-                        list.append(s)
+                        if !matchedIds.contains(s.id) {
+                            matchedIds.insert(s.id)
+                            list.append(s)
+                        }
                     }
                 }
                 sqlite3_finalize(stmt)
             }
 
-            // 如果 FTS 没有结果，做 LIKE 模糊兜底
-            if list.isEmpty {
+            // 2. 如果结果未满，执行 LIKE 语义模糊兜底（中文无分词检索必备）
+            if list.count < limit {
+                let remaining = limit - list.count
                 let likeSQL = """
                 SELECT * FROM context_sessions
-                WHERE title LIKE ? OR primary_app LIKE ? OR ai_summary LIKE ? OR detected_project LIKE ?
+                WHERE title LIKE ? OR primary_app LIKE ? OR ai_summary LIKE ? OR detected_project LIKE ? OR user_note LIKE ?
                 ORDER BY last_active_at DESC LIMIT ?;
                 """
                 var likeStmt: OpaquePointer?
@@ -371,11 +433,15 @@ public final class DatabaseManager: @unchecked Sendable {
                     sqlite3_bind_text(likeStmt, 2, (wildcard as NSString).utf8String, -1, nil)
                     sqlite3_bind_text(likeStmt, 3, (wildcard as NSString).utf8String, -1, nil)
                     sqlite3_bind_text(likeStmt, 4, (wildcard as NSString).utf8String, -1, nil)
-                    sqlite3_bind_int(likeStmt, 5, Int32(limit))
+                    sqlite3_bind_text(likeStmt, 5, (wildcard as NSString).utf8String, -1, nil)
+                    sqlite3_bind_int(likeStmt, 6, Int32(remaining))
 
                     while sqlite3_step(likeStmt) == SQLITE_ROW {
                         if let s = parseSession(from: likeStmt) {
-                            list.append(s)
+                            if !matchedIds.contains(s.id) {
+                                matchedIds.insert(s.id)
+                                list.append(s)
+                            }
                         }
                     }
                     sqlite3_finalize(likeStmt)
@@ -429,6 +495,15 @@ public final class DatabaseManager: @unchecked Sendable {
         let createdAt = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 10))
         let lastActiveAt = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 11))
 
+        // 动态检查 user_note（第 12 列）
+        var userNote: String? = nil
+        let columnCount = sqlite3_column_count(stmt)
+        if columnCount > 12 {
+            if let noteC = sqlite3_column_text(stmt, 12) {
+                userNote = String(cString: noteC)
+            }
+        }
+
         // 查询该 Session 下包含的 items
         let items = fetchEvents(sessionId: id)
 
@@ -437,6 +512,7 @@ public final class DatabaseManager: @unchecked Sendable {
             title: title,
             primaryApp: primaryApp,
             items: items,
+            userNote: userNote,
             aiSummary: summary,
             suggestion: suggestion,
             thumbnailPath: thumbnail,
@@ -455,6 +531,8 @@ public final class DatabaseManager: @unchecked Sendable {
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_text(stmt, 1, (sessionId.uuidString as NSString).utf8String, -1, nil)
+            let colCount = sqlite3_column_count(stmt)
+
             while sqlite3_step(stmt) == SQLITE_ROW {
                 if let idCString = sqlite3_column_text(stmt, 0),
                    let id = UUID(uuidString: String(cString: idCString)),
@@ -477,6 +555,13 @@ public final class DatabaseManager: @unchecked Sendable {
 
                     let captured = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 8))
 
+                    var project: String? = nil
+                    if colCount > 9 {
+                        if let pC = sqlite3_column_text(stmt, 9) {
+                            project = String(cString: pC)
+                        }
+                    }
+
                     items.append(ContextItem(
                         id: id,
                         appName: appName,
@@ -484,6 +569,7 @@ public final class DatabaseManager: @unchecked Sendable {
                         windowTitle: winTitle,
                         url: url,
                         filePath: filePath,
+                        project: project,
                         extractedText: text,
                         capturedAt: captured
                     ))

@@ -100,6 +100,42 @@ public final class ContextStore: @unchecked Sendable {
     private let db = DatabaseManager.shared
     private let queue = DispatchQueue(label: "app.memoryelf.store", qos: .utility)
 
+    public static func makeJSONDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { d in
+            let container = try d.singleValueContainer()
+            if let dateStr = try? container.decode(String.self) {
+                let isoWithFrac = ISO8601DateFormatter()
+                isoWithFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = isoWithFrac.date(from: dateStr) {
+                    return date
+                }
+                let isoStd = ISO8601DateFormatter()
+                if let date = isoStd.date(from: dateStr) {
+                    return date
+                }
+                let df = DateFormatter()
+                df.locale = Locale(identifier: "en_US_POSIX")
+                df.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                if let date = df.date(from: dateStr) {
+                    return date
+                }
+            }
+            if let timestamp = try? container.decode(Double.self) {
+                return Date(timeIntervalSince1970: timestamp)
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "无法解析日期字段")
+        }
+        return decoder
+    }
+
+    public static func makeJSONEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
     private init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let folder = home.appendingPathComponent(".contextflow", isDirectory: true)
@@ -111,18 +147,35 @@ public final class ContextStore: @unchecked Sendable {
         // 优先从 SQLite 数据库加载已持久化的所有现场
         let dbSessions = db.fetchAllSessions(limit: 200)
 
-        // 读取 settings (若存在 data.json 则解析 settings 并兼容升级)
+        // 读取 settings (严格使用统一 dateDecodingStrategy 兼容解码)
         var currentSettings = AppSettings()
         var active: ContextSession? = nil
 
+        let decoder = Self.makeJSONDecoder()
         if let data = try? Data(contentsOf: fileURL),
-           let decoder = try? JSONDecoder().decode(StoragePayload.self, from: data) {
-            currentSettings = decoder.settings
-            active = decoder.activeSession
+           let payload = try? decoder.decode(StoragePayload.self, from: data) {
+            currentSettings = payload.settings
+            active = payload.activeSession
         }
 
-        // 若 SQLite 中已有更丰富的数据，以 SQLite 现场为准
-        let finalSessions = dbSessions.isEmpty ? (try? JSONDecoder().decode(StoragePayload.self, from: Data(contentsOf: fileURL)))?.sessions ?? [] : dbSessions
+        // P0-04: 优先从系统原生 Keychain 安全加载 API Key，杜绝明文泄露
+        if let secKey = KeychainHelper.shared.loadApiKey(), !secKey.isEmpty {
+            currentSettings.aiApiKey = secKey
+        } else if !currentSettings.aiApiKey.isEmpty {
+            // 平滑向后兼容：自动迁移旧版本 JSON 明文 Key 到系统 Keychain 并保护
+            KeychainHelper.shared.saveApiKey(currentSettings.aiApiKey)
+        }
+
+        // 若 SQLite 中已有更丰富的数据，以 SQLite 现场为准，否则回退到 JSON 中的 sessions
+        let finalSessions: [ContextSession]
+        if !dbSessions.isEmpty {
+            finalSessions = dbSessions
+        } else if let data = try? Data(contentsOf: fileURL),
+                  let payload = try? decoder.decode(StoragePayload.self, from: data) {
+            finalSessions = payload.sessions
+        } else {
+            finalSessions = []
+        }
 
         return StoragePayload(
             settings: currentSettings,
@@ -135,6 +188,11 @@ public final class ContextStore: @unchecked Sendable {
         queue.async { [weak self] in
             guard let self = self else { return }
 
+            // P0-04: API Key 安全写入系统钥匙串，杜绝落盘泄露
+            if !settings.aiApiKey.isEmpty {
+                KeychainHelper.shared.saveApiKey(settings.aiApiKey)
+            }
+
             // 1. 同步全量持久化至 SQLite 核心数据库
             for s in sessions {
                 self.db.upsertSession(s)
@@ -143,11 +201,11 @@ public final class ContextStore: @unchecked Sendable {
                 self.db.upsertSession(act)
             }
 
-            // 2. 写入轻量级快照 JSON，确保极速启动与外部工具诊断
-            let payload = StoragePayload(settings: settings, activeSession: active, sessions: sessions)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
+            // 2. 写入轻量级快照 JSON (对落盘凭证进行安全置空，磁盘零明文存储敏感 Key)
+            var diskSettings = settings
+            diskSettings.aiApiKey = "" // 敏感凭据纯系统 Keychain 保管
+            let payload = StoragePayload(settings: diskSettings, activeSession: active, sessions: sessions)
+            let encoder = Self.makeJSONEncoder()
             if let data = try? encoder.encode(payload) {
                 try? data.write(to: self.fileURL, options: .atomic)
             }

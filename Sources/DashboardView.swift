@@ -729,6 +729,44 @@ public struct DashboardView: View {
     // MARK: - 3. AI 记忆对话专页 (Chat Memory Workspace: 统一物理基线)
     private var chatMemoryWorkspace: some View {
         VStack(spacing: 0) {
+            // 顶部引擎就绪与运行状态条 (彻底透明化：离线模式 vs 云端大模型)
+            HStack(spacing: 6) {
+                if engine.settings.apiKeys.isEmpty && engine.settings.aiProvider != "ollama" {
+                    Image(systemName: "bolt.horizontal.fill")
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                        .font(.system(size: 10))
+                    Text("当前为「端侧离线提炼模式」(未检测到 API Key，由本地 SQLite WAL 快速响应)")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Button(action: {
+                        SettingsWindowController.shared.showWindow(tab: "ai")
+                    }) {
+                        HStack(spacing: 2) {
+                            Text("配置大模型 API Key")
+                            Image(systemName: "chevron.right").font(.system(size: 8))
+                        }
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(themeMgr.currentTheme.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Circle().fill(Color.green).frame(width: 6, height: 6)
+                    Text("大模型已就绪 [\(engine.settings.aiModel)] · 多 Key 轮换池已激活")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.45))
+
+            Divider().opacity(0.25)
+
             // 对话消息列表
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
@@ -756,7 +794,7 @@ public struct DashboardView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
                 }
-                .onChange(of: chatMessages.count) { _ in
+                .onChange(of: chatMessages.count) { _, _ in
                     if let last = chatMessages.last?.id {
                         proxy.scrollTo(last, anchor: .bottom)
                     }
